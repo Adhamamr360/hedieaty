@@ -54,4 +54,3 @@ class SignUpPage extends StatelessWidget {
     );
   }
 }
-//sign up page
