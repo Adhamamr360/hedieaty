@@ -24,9 +24,9 @@ class LoginPage extends StatelessWidget {
                 Text(
                   'Hedieaty',
                   style: TextStyle(
+                    fontFamily: 'Pacifico',
                     fontSize: 40,
                     color: Color(0xFFdf43a1),
-                    fontWeight: FontWeight.bold,
                   ),
                 ),
                 SizedBox(height: 40),
