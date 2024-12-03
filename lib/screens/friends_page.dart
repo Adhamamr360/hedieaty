@@ -60,10 +60,10 @@ class _HomePageState extends State<HomePage> {
         items: [
           BottomNavigationBarItem(
             icon: Icon(
-              Icons.home,
+              Icons.group,
               color: _selectedIndex == 0 ? Color(0xFFdf43a1) : Colors.grey,
             ),
-            label: 'Home',
+            label: 'Friends',
             backgroundColor: _selectedIndex == 0 ? Color(0xFFdf43a1) : Colors.grey,
           ),
           BottomNavigationBarItem(

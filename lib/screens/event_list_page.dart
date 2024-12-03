@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'home_page.dart';
+import 'friends_page.dart';
 import 'gift_list_page.dart';
 import 'profile_page.dart';
 
@@ -62,10 +62,10 @@ class _EventListPageState extends State<EventListPage> {
         items: [
           BottomNavigationBarItem(
             icon: Icon(
-              Icons.home,
+              Icons.group,
               color: _selectedIndex == 0 ? Color(0xFFdf43a1) : Colors.grey,
             ),
-            label: 'Home',
+            label: 'Friends',
             backgroundColor: _selectedIndex == 0 ? Color(0xFFdf43a1) : Colors.grey,
           ),
           BottomNavigationBarItem(

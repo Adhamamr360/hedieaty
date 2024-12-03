@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
-import 'screens/login_page.dart'; // Import the LoginPage screen
+import 'package:firebase_core/firebase_core.dart';
+import 'screens/login_page.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
   runApp(HedieatyApp());
 }
 
@@ -11,7 +14,7 @@ class HedieatyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Hedieaty',
       theme: ThemeData(primaryColor: Color(0xFFdf43a1)),
-      home: LoginPage(), // Start with the LoginPage
+      home: LoginPage(),
     );
   }
 }
