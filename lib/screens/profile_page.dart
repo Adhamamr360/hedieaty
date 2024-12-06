@@ -1,7 +1,39 @@
 import 'package:flutter/material.dart';
-import 'login_page.dart';
+import '../services/db_helper.dart';
+import 'login_page.dart'; // Import DatabaseHelper
 
-class ProfilePage extends StatelessWidget {
+class ProfilePage extends StatefulWidget {
+  @override
+  _ProfilePageState createState() => _ProfilePageState();
+}
+
+class _ProfilePageState extends State<ProfilePage> {
+  final DatabaseHelper _dbHelper = DatabaseHelper();
+  String name = 'Loading...';
+  String email = 'Loading...';
+  String phone = 'Loading...';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserProfile();
+  }
+
+  Future<void> _loadUserProfile() async {
+    // Retrieve the current logged-in user's data from SQLite
+    final user = await _dbHelper.getUser('uid');  // Replace 'uid' with the actual UID
+
+    if (user != null) {
+      setState(() {
+        name = user['name'] ?? 'No name';
+        email = user['email'] ?? 'No email';
+        phone = user['phone'] ?? 'No phone number';
+      });
+    } else {
+      print('No user found in SQLite');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -28,7 +60,9 @@ class ProfilePage extends StatelessWidget {
           children: [
             Icon(Icons.person, size: 100.0, color: Color(0xFFdf43a1)),
             SizedBox(height: 20),
-            Text('User Profile', style: TextStyle(fontSize: 24)),
+            Text('Name: $name', style: TextStyle(fontSize: 24)),
+            Text('Email: $email', style: TextStyle(fontSize: 24)),
+            Text('Phone: $phone', style: TextStyle(fontSize: 24)),
           ],
         ),
       ),

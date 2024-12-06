@@ -3,45 +3,31 @@ import 'package:firebase_auth/firebase_auth.dart';
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  // Sign in function
-  Future<bool> signIn(String emailAddress, String password) async {
+  // Sign up function, returning UserCredential
+  Future<UserCredential> signUp(String emailAddress, String password) async {
     try {
-      await _auth.signInWithEmailAndPassword(
+      return await _auth.createUserWithEmailAndPassword(
         email: emailAddress,
         password: password,
       );
-      return true;
     } on FirebaseAuthException catch (e) {
-      if (e.code == 'user-not-found') {
-        print('No user found for that email.');
-      } else if (e.code == 'wrong-password') {
-        print('Wrong password provided for that user.');
-      }
-      return false;
+      throw e; // Forward the exception for handling in calling code
     } catch (e) {
-      print('Unexpected error: $e');
-      return false;
+      throw Exception('An unexpected error occurred.');
     }
   }
 
-  // Sign up function
-  Future<bool> signUp(String emailAddress, String password) async {
+  // Sign in function
+  Future<UserCredential> signIn(String emailAddress, String password) async {
     try {
-      await _auth.createUserWithEmailAndPassword(
+      return await _auth.signInWithEmailAndPassword(
         email: emailAddress,
         password: password,
       );
-      return true;
     } on FirebaseAuthException catch (e) {
-      if (e.code == 'weak-password') {
-        print('The password provided is too weak.');
-      } else if (e.code == 'email-already-in-use') {
-        print('The account already exists for that email.');
-      }
-      return false;
+      throw e; // Forward the exception for handling in calling code
     } catch (e) {
-      print('Unexpected error: $e');
-      return false;
+      throw Exception('An unexpected error occurred.');
     }
   }
 

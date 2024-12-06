@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../services/db_helper.dart'; // Import DatabaseHelper
 import 'friends_page.dart';
 import 'signup_page.dart';
+import '../services/auth_services.dart'; // Import AuthService
 
 class LoginPage extends StatefulWidget {
   @override
@@ -11,21 +14,50 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final AuthService _authService = AuthService();
+  final DatabaseHelper _dbHelper = DatabaseHelper(); // Initialize DatabaseHelper
 
   bool _isLoading = false;
 
   Future<void> _login() async {
+    if (_emailController.text.trim().isEmpty || _passwordController.text.trim().isEmpty) {
+      _showErrorDialog('Please fill in all fields.');
+      return;
+    }
+
     setState(() {
       _isLoading = true;
     });
 
     try {
-      await _auth.signInWithEmailAndPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
+      await _authService.signIn(
+        _emailController.text.trim(),
+        _passwordController.text.trim(),
       );
-      // Navigate to HomePage and clear navigation stack
+
+      final uid = FirebaseAuth.instance.currentUser!.uid;
+
+      // Fetch the user data from Firestore
+      final userDoc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+
+      if (userDoc.exists) {
+        final userData = userDoc.data()!;
+
+        // Save user data to SQLite (including phone number)
+        await _dbHelper.insertUser({
+          'uid': uid,
+          'name': userData['name'] ?? 'N/A',
+          'email': userData['email'] ?? 'N/A',
+          'phone': userData['phone'] ?? 'N/A',  // Save phone number
+        });
+
+        print('User data saved to SQLite');
+      } else {
+        _showErrorDialog('User profile not found.');
+        return;
+      }
+
+      // Navigate to HomePage after successful login
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (context) => HomePage()),
@@ -36,12 +68,13 @@ class _LoginPageState extends State<LoginPage> {
       if (e.code == 'user-not-found') {
         errorMessage = 'No user found for that email.';
       } else if (e.code == 'wrong-password') {
-        errorMessage = 'Wrong password provided.';
+        errorMessage = 'Incorrect password. Please try again.';
       } else {
         errorMessage = 'An unexpected error occurred. Please try again.';
       }
       _showErrorDialog(errorMessage);
     } catch (e) {
+      print('Error during login: $e');
       _showErrorDialog('Something went wrong. Please try again.');
     } finally {
       setState(() {

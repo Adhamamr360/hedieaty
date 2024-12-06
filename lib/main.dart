@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:hedieaty/services/db_helper.dart';
 import 'screens/login_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await DatabaseHelper().database; // Ensure SQLite is initialized
   await Firebase.initializeApp();
   runApp(HedieatyApp());
 }
