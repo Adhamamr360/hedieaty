@@ -44,5 +44,37 @@ class DatabaseHelper {
     final db = await database;
     await db.delete('users', where: 'uid = ?', whereArgs: [uid]);
   }
+
+  Future<void> insertOrUpdateUser(Map<String, dynamic> user) async {
+    final db = await database;
+
+    // Check if the user with the given UID exists
+    final existingUser = await db.query(
+      'users',
+      where: 'uid = ?',
+      whereArgs: [user['uid']],
+    );
+
+    if (existingUser.isNotEmpty) {
+      // User exists, update the record
+      await db.update(
+        'users',
+        user,
+        where: 'uid = ?',
+        whereArgs: [user['uid']],
+      );
+      print('User updated: ${user['uid']}');
+    } else {
+      // User does not exist, insert a new record
+      await db.insert(
+        'users',
+        user,
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+      print('New user inserted: ${user['uid']}');
+    }
+  }
+
+
 }
 

@@ -20,8 +20,12 @@ class _LoginPageState extends State<LoginPage> {
   bool _isLoading = false;
 
   Future<void> _login() async {
-    if (_emailController.text.trim().isEmpty || _passwordController.text.trim().isEmpty) {
-      _showErrorDialog('Please fill in all fields.');
+    if (_emailController.text.trim().isEmpty) {
+      _showErrorDialog('Please enter your email address.');
+      return;
+    }
+    if (_passwordController.text.trim().isEmpty) {
+      _showErrorDialog('Please enter your password.');
       return;
     }
 
@@ -30,34 +34,36 @@ class _LoginPageState extends State<LoginPage> {
     });
 
     try {
+      // Attempt to log in with email and password
       await _authService.signIn(
         _emailController.text.trim(),
         _passwordController.text.trim(),
       );
 
+      // Get the current user's UID
       final uid = FirebaseAuth.instance.currentUser!.uid;
 
-      // Fetch the user data from Firestore
+      // Fetch the user's data from Firestore
       final userDoc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
 
       if (userDoc.exists) {
         final userData = userDoc.data()!;
 
-        // Save user data to SQLite (including phone number)
-        await _dbHelper.insertUser({
+        // Save or update the user data in SQLite
+        await _dbHelper.insertOrUpdateUser({
           'uid': uid,
           'name': userData['name'] ?? 'N/A',
           'email': userData['email'] ?? 'N/A',
-          'phone': userData['phone'] ?? 'N/A',  // Save phone number
+          'phone': userData['phone'] ?? 'N/A',
         });
 
-        print('User data saved to SQLite');
+        print('User data saved or updated in SQLite.');
       } else {
         _showErrorDialog('User profile not found.');
         return;
       }
 
-      // Navigate to HomePage after successful login
+      // Navigate to HomePage
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (context) => HomePage()),
@@ -69,6 +75,8 @@ class _LoginPageState extends State<LoginPage> {
         errorMessage = 'No user found for that email.';
       } else if (e.code == 'wrong-password') {
         errorMessage = 'Incorrect password. Please try again.';
+      } else if (e.code == 'invalid-email') {
+        errorMessage = 'The email address is not valid.';
       } else {
         errorMessage = 'An unexpected error occurred. Please try again.';
       }
@@ -82,6 +90,7 @@ class _LoginPageState extends State<LoginPage> {
       });
     }
   }
+
 
   void _showErrorDialog(String message) {
     showDialog(
