@@ -75,6 +75,24 @@ class DatabaseHelper {
     }
   }
 
+// Insert a gift
+  Future<void> insertGift(Map<String, dynamic> gift) async {
+    final db = await database;
+    await db.insert('gifts', gift);
+  }
+
+// Get gifts for a specific user
+  Future<List<Map<String, dynamic>>> getGiftsForUser(String uid) async {
+    final db = await database;
+    return await db.query('gifts', where: 'uid = ?', whereArgs: [uid]);
+  }
+
+// Delete a gift by ID
+  Future<void> deleteGift(int id) async {
+    final db = await database;
+    await db.delete('gifts', where: 'id = ?', whereArgs: [id]);
+  }
+
 
 }
 
