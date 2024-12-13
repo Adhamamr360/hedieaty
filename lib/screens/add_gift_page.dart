@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/db_helper.dart';
 
 class AddGiftPage extends StatefulWidget {
-  final String uid; // Logged-in user's UID
+  final String uid;
   AddGiftPage({required this.uid});
 
   @override
@@ -27,15 +28,33 @@ class _AddGiftPageState extends State<AddGiftPage> {
       return;
     }
 
-    await _dbHelper.insertGift({
+    final giftData = {
       'uid': widget.uid,
       'name': _nameController.text.trim(),
       'description': _descriptionController.text.trim(),
       'price': double.parse(_priceController.text.trim()),
       'event': _eventController.text.trim(),
-    });
+    };
 
-    Navigator.pop(context);
+    try {
+      // Save to SQLite
+      await _dbHelper.insertGift(giftData);
+
+      // Save to Firestore
+      await FirebaseFirestore.instance.collection('gifts').add({
+        ...giftData,
+        'created_at': Timestamp.now(),
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gift added successfully!')));
+      Navigator.pop(context); // Go back to GiftListPage
+    } catch (e) {
+      print('Error saving gift: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to add gift.')),
+      );
+    }
   }
 
   @override

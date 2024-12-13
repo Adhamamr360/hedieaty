@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'friends_page.dart';
-import 'gift_list_page.dart';
-import 'profile_page.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../services/db_helper.dart';
+import 'add_event_page.dart';
 
 class EventListPage extends StatefulWidget {
   @override
@@ -9,80 +9,67 @@ class EventListPage extends StatefulWidget {
 }
 
 class _EventListPageState extends State<EventListPage> {
-  int _selectedIndex = 1;
+  final DatabaseHelper _dbHelper = DatabaseHelper();
+  final String uid = FirebaseAuth.instance.currentUser!.uid;
+  List<Map<String, dynamic>> _events = [];
 
-  void _onItemTapped(int index) {
+  @override
+  void initState() {
+    super.initState();
+    _loadEvents();
+  }
+
+  Future<void> _loadEvents() async {
+    final events = await _dbHelper.getEventsForUser(uid);
     setState(() {
-      _selectedIndex = index;
+      _events = events;
     });
-
-    if (index == 0) {
-      // Navigate to Home Page
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => HomePage()),
-      );
-    } else if (index == 2) {
-      // Navigate to Gift List Page
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => GiftListPage()),
-      );
-    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Event List'),
-        backgroundColor: Color(0xFFdf43a1),
-        automaticallyImplyLeading: false,
-        actions: [
-          IconButton(
-            icon: Icon(Icons.account_circle),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => ProfilePage()),
-              );
-            },
-          ),
-        ],
-      ),
-      body: Center(
-        child: Text(
-          'Event List Page',
-          style: TextStyle(fontSize: 24, color: Color(0xFFdf43a1)),
-        ),
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        onTap: _onItemTapped,
-        items: [
-          BottomNavigationBarItem(
-            icon: Icon(
-              Icons.group,
-              color: _selectedIndex == 0 ? Color(0xFFdf43a1) : Colors.grey,
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: ElevatedButton(
+              onPressed: () async {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => AddEventPage(uid: uid),
+                  ),
+                );
+                await _loadEvents(); // Reload events after returning
+              },
+              child: Text('Add Event'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Color(0xFFdf43a1),
+                textStyle: TextStyle(fontSize: 16),
+              ),
             ),
-            label: 'Friends',
-            backgroundColor: _selectedIndex == 0 ? Color(0xFFdf43a1) : Colors.grey,
           ),
-          BottomNavigationBarItem(
-            icon: Icon(
-              Icons.event,
-              color: _selectedIndex == 1 ? Color(0xFFdf43a1) : Colors.grey,
+          Expanded(
+            child: _events.isEmpty
+                ? Center(
+              child: Text(
+                'No events added yet!',
+                style: TextStyle(fontSize: 18, color: Colors.grey),
+              ),
+            )
+                : ListView.builder(
+              itemCount: _events.length,
+              itemBuilder: (context, index) {
+                final event = _events[index];
+                return Card(
+                  child: ListTile(
+                    title: Text(event['name']),
+                    subtitle: Text('${event['description']} - ${event['date']}'),
+                  ),
+                );
+              },
             ),
-            label: 'Events',
-            backgroundColor: _selectedIndex == 1 ? Color(0xFFdf43a1) : Colors.grey,
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(
-              Icons.card_giftcard,
-              color: _selectedIndex == 2 ? Color(0xFFdf43a1) : Colors.grey,
-            ),
-            label: 'Gifts',
-            backgroundColor: _selectedIndex == 2 ? Color(0xFFdf43a1) : Colors.grey,
           ),
         ],
       ),
