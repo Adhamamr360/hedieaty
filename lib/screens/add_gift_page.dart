@@ -14,47 +14,119 @@ class _AddGiftPageState extends State<AddGiftPage> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
   final TextEditingController _priceController = TextEditingController();
-  final TextEditingController _eventController = TextEditingController();
   final DatabaseHelper _dbHelper = DatabaseHelper();
 
-  Future<void> _saveGift() async {
-    if (_nameController.text.trim().isEmpty ||
-        _descriptionController.text.trim().isEmpty ||
-        _priceController.text.trim().isEmpty ||
-        _eventController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Please fill all fields!')),
-      );
-      return;
-    }
+  List<Map<String, dynamic>> _localEvents = [];
+  List<Map<String, dynamic>> _firestoreEvents = [];
+  int? _selectedLocalEventId; // Store event ID for local events
+  String? _selectedFirestoreEvent; // Store Firestore event ID
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLocalEvents();
+    _loadFirestoreEvents();
+  }
+
+  Future<void> _loadLocalEvents() async {
+    final events = await _dbHelper.getEventsForUser(widget.uid);
+    setState(() {
+      _localEvents = events;
+    });
+  }
+
+  Future<void> _loadFirestoreEvents() async {
+    final querySnapshot = await FirebaseFirestore.instance
+        .collection('events')
+        .where('uid', isEqualTo: widget.uid)
+        .get();
+
+    setState(() {
+      _firestoreEvents = querySnapshot.docs
+          .map((doc) => {
+        'id': doc.id,
+        'name': doc['name'],
+      })
+          .toList();
+    });
+  }
+
+  Future<void> _saveGiftLocally() async {
+    if (!_validateInputs(isLocal: true)) return;
 
     final giftData = {
       'uid': widget.uid,
       'name': _nameController.text.trim(),
       'description': _descriptionController.text.trim(),
       'price': double.parse(_priceController.text.trim()),
-      'event': _eventController.text.trim(),
+      'event': _selectedLocalEventId.toString(), // Convert event ID to string
     };
 
     try {
       // Save to SQLite
       await _dbHelper.insertGift(giftData);
 
-      // Save to Firestore
-      await FirebaseFirestore.instance.collection('gifts').add({
-        ...giftData,
-        'created_at': Timestamp.now(),
+      // Increment gift count for the selected event
+      await _dbHelper.incrementEventGiftCount(_selectedLocalEventId!);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gift added locally!')),
+      );
+      Navigator.pop(context);
+    } catch (e) {
+      print('Error saving gift locally: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to save gift locally.')),
+      );
+    }
+  }
+
+  Future<void> _publishGiftToFirestore() async {
+    if (!_validateInputs(isLocal: false)) return;
+
+    final giftData = {
+      'uid': widget.uid,
+      'name': _nameController.text.trim(),
+      'description': _descriptionController.text.trim(),
+      'price': double.parse(_priceController.text.trim()),
+      'event': _firestoreEvents.firstWhere((event) => event['id'] == _selectedFirestoreEvent)['name'], // Get event name
+      'event_id': _selectedFirestoreEvent, // Store the event ID in a separate field
+      'created_at': Timestamp.now(),
+    };
+
+    try {
+      // Save the gift to Firestore
+      await FirebaseFirestore.instance.collection('gifts').add(giftData);
+
+      // Increment gift count for the associated Firestore event
+      await FirebaseFirestore.instance.collection('events').doc(_selectedFirestoreEvent).update({
+        'number_of_gifts': FieldValue.increment(1),
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gift added successfully!')));
-      Navigator.pop(context); // Go back to GiftListPage
+        SnackBar(content: Text('Gift published to Firestore!')),
+      );
+      Navigator.pop(context);
     } catch (e) {
-      print('Error saving gift: $e');
+      print('Error publishing gift: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to add gift.')),
+        SnackBar(content: Text('Failed to publish gift.')),
       );
     }
+  }
+
+
+  bool _validateInputs({required bool isLocal}) {
+    if (_nameController.text.trim().isEmpty ||
+        _descriptionController.text.trim().isEmpty ||
+        _priceController.text.trim().isEmpty ||
+        (isLocal ? _selectedLocalEventId == null : _selectedFirestoreEvent == null)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Please fill all fields and select an event!')),
+      );
+      return false;
+    }
+    return true;
   }
 
   @override
@@ -81,17 +153,67 @@ class _AddGiftPageState extends State<AddGiftPage> {
               keyboardType: TextInputType.number,
               decoration: InputDecoration(labelText: 'Price'),
             ),
-            TextField(
-              controller: _eventController,
-              decoration: InputDecoration(labelText: 'Event'),
+            SizedBox(height: 20),
+            DropdownButtonFormField<int>(
+              value: _selectedLocalEventId,
+              hint: Text('Select Local Event'),
+              items: _localEvents.map((event) {
+                return DropdownMenuItem<int>(
+                  value: event['id'] as int, // Use event ID
+                  child: Text(event['name']),
+                );
+              }).toList(),
+              onChanged: (value) {
+                setState(() {
+                  _selectedLocalEventId = value;
+                  _selectedFirestoreEvent = null; // Clear Firestore selection
+                });
+              },
+              decoration: InputDecoration(
+                labelText: 'Local Event',
+                border: OutlineInputBorder(),
+              ),
             ),
             SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: _saveGift,
-              child: Text('Save Gift'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Color(0xFFdf43a1),
+            DropdownButtonFormField<String>(
+              value: _selectedFirestoreEvent,
+              hint: Text('Select Firestore Event'),
+              items: _firestoreEvents.map((event) {
+                return DropdownMenuItem<String>(
+                  value: event['id'] as String,
+                  child: Text(event['name']),
+                );
+              }).toList(),
+              onChanged: (value) {
+                setState(() {
+                  _selectedFirestoreEvent = value;
+                  _selectedLocalEventId = null; // Clear Local selection
+                });
+              },
+              decoration: InputDecoration(
+                labelText: 'Firestore Event',
+                border: OutlineInputBorder(),
               ),
+            ),
+            SizedBox(height: 20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                ElevatedButton(
+                  onPressed: _saveGiftLocally,
+                  child: Text('Save Locally'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: _publishGiftToFirestore,
+                  child: Text('Publish to Firestore'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Color(0xFFdf43a1),
+                  ),
+                ),
+              ],
             ),
           ],
         ),

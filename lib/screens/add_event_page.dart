@@ -17,7 +17,13 @@ class _AddEventPageState extends State<AddEventPage> {
   DateTime? _selectedDate;
   final DatabaseHelper _dbHelper = DatabaseHelper();
 
-  Future<void> _saveEvent() async {
+  // Format date as "YYYY-MM-DD" for storage
+  String _formatDate(DateTime date) {
+    return "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
+  }
+
+  // Save event data locally in SQLite
+  Future<void> _saveEventLocally() async {
     if (_nameController.text.trim().isEmpty ||
         _descriptionController.text.trim().isEmpty ||
         _locationController.text.trim().isEmpty ||
@@ -33,13 +39,47 @@ class _AddEventPageState extends State<AddEventPage> {
       'name': _nameController.text.trim(),
       'description': _descriptionController.text.trim(),
       'location': _locationController.text.trim(),
-      'date': _selectedDate!.toIso8601String(),
+      'date': _formatDate(_selectedDate!), // Store as "YYYY-MM-DD"
+      'number_of_gifts': 0, // Initialized to 0
     };
 
     try {
       // Save to SQLite
       await _dbHelper.insertEvent(eventData);
 
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Event added locally!')));
+      Navigator.pop(context); // Return to EventListPage
+    } catch (e) {
+      print('Error saving event locally: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to save event locally.')),
+      );
+    }
+  }
+
+  // Publish event data to Firestore
+  Future<void> _publishEventToFirestore() async {
+    if (_nameController.text.trim().isEmpty ||
+        _descriptionController.text.trim().isEmpty ||
+        _locationController.text.trim().isEmpty ||
+        _selectedDate == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Please fill all fields!')),
+      );
+      return;
+    }
+
+    final eventData = {
+      'uid': widget.uid,
+      'name': _nameController.text.trim(),
+      'description': _descriptionController.text.trim(),
+      'location': _locationController.text.trim(),
+      'date': _formatDate(_selectedDate!), // Store as "YYYY-MM-DD"
+      'number_of_gifts': 0, // Initialized to 0
+    };
+
+    try {
       // Save to Firestore
       await FirebaseFirestore.instance.collection('events').add({
         ...eventData,
@@ -47,16 +87,17 @@ class _AddEventPageState extends State<AddEventPage> {
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Event added successfully!')));
+          SnackBar(content: Text('Event published to Firestore!')));
       Navigator.pop(context); // Return to EventListPage
     } catch (e) {
-      print('Error saving event: $e');
+      print('Error publishing event to Firestore: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to add event.')),
+        SnackBar(content: Text('Failed to publish event.')),
       );
     }
   }
 
+  // Pick date for the event
   Future<void> _pickDate() async {
     final selectedDate = await showDatePicker(
       context: context,
@@ -101,7 +142,7 @@ class _AddEventPageState extends State<AddEventPage> {
                 Text(
                   _selectedDate == null
                       ? 'No date selected'
-                      : 'Date: ${_selectedDate!.toLocal().toString().split(' ')[0]}',
+                      : 'Date: ${_formatDate(_selectedDate!)}', // Show formatted date
                 ),
                 Spacer(),
                 TextButton(
@@ -111,12 +152,24 @@ class _AddEventPageState extends State<AddEventPage> {
               ],
             ),
             SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: _saveEvent,
-              child: Text('Save Event'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Color(0xFFdf43a1),
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                ElevatedButton(
+                  onPressed: _saveEventLocally,
+                  child: Text('Save Locally'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: _publishEventToFirestore,
+                  child: Text('Publish'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Color(0xFFdf43a1),
+                  ),
+                ),
+              ],
             ),
           ],
         ),

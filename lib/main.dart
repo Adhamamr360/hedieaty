@@ -5,6 +5,7 @@ import 'screens/login_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await DatabaseHelper().recreateDatabase();
   await DatabaseHelper().database; // Ensure SQLite is initialized
   await Firebase.initializeApp();
   runApp(HedieatyApp());
