@@ -20,16 +20,22 @@ class AuthService {
   // Sign in function
   Future<UserCredential> signIn(String emailAddress, String password) async {
     try {
-      return await _auth.signInWithEmailAndPassword(
-        email: emailAddress,
-        password: password,
-      );
+      // Check if the user is already signed in
+      if (_auth.currentUser != null) {
+        return await _auth.signInWithEmailAndPassword(
+          email: emailAddress,
+          password: password,
+        );
+      } else {
+        throw Exception('User is already signed in.');
+      }
     } on FirebaseAuthException catch (e) {
       throw e; // Forward the exception for handling in calling code
     } catch (e) {
       throw Exception('An unexpected error occurred.');
     }
   }
+
 
   // Sign out function
   Future<void> signOut() async {

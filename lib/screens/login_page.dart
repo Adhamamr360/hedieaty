@@ -20,12 +20,12 @@ class _LoginPageState extends State<LoginPage> {
   bool _isLoading = false;
 
   Future<void> _login() async {
-    if (_emailController.text.trim().isEmpty) {
-      _showErrorDialog('Please enter your email address.');
-      return;
-    }
-    if (_passwordController.text.trim().isEmpty) {
-      _showErrorDialog('Please enter your password.');
+    // Input validation
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+
+    if (email.isEmpty || password.isEmpty) {
+      _showErrorDialog('Please fill in both email and password.');
       return;
     }
 
@@ -35,10 +35,7 @@ class _LoginPageState extends State<LoginPage> {
 
     try {
       // Attempt to log in with email and password
-      await _authService.signIn(
-        _emailController.text.trim(),
-        _passwordController.text.trim(),
-      );
+      await _authService.signIn(email, password);
 
       // Get the current user's UID
       final uid = FirebaseAuth.instance.currentUser!.uid;
@@ -70,16 +67,7 @@ class _LoginPageState extends State<LoginPage> {
             (route) => false,
       );
     } on FirebaseAuthException catch (e) {
-      String errorMessage;
-      if (e.code == 'user-not-found') {
-        errorMessage = 'No user found for that email.';
-      } else if (e.code == 'wrong-password') {
-        errorMessage = 'Incorrect password. Please try again.';
-      } else if (e.code == 'invalid-email') {
-        errorMessage = 'The email address is not valid.';
-      } else {
-        errorMessage = 'An unexpected error occurred. Please try again.';
-      }
+      String errorMessage = 'Incorrect email or password. Please try again.';
       _showErrorDialog(errorMessage);
     } catch (e) {
       print('Error during login: $e');

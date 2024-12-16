@@ -13,41 +13,132 @@ class _SignUpPageState extends State<SignUpPage> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
-  final TextEditingController _nameController = TextEditingController(); // Name controller
+  final TextEditingController _nameController = TextEditingController();
   final AuthService _authService = AuthService();
 
   bool _isLoading = false;
 
-  Future<void> _signUp() async {
-    if (_emailController.text.trim().isEmpty ||
-        _passwordController.text.trim().isEmpty ||
-        _phoneController.text.trim().isEmpty ||
-        _nameController.text.trim().isEmpty) {
-      _showErrorDialog('Please fill in all fields.');
-      return;
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    _phoneController.dispose();
+    _nameController.dispose();
+    super.dispose();
+  }
+
+  // Validate all fields
+  bool _validateAllFields() {
+    final name = _nameController.text.trim();
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+    final phone = _phoneController.text.trim();
+
+    if (name.isEmpty || email.isEmpty || password.isEmpty || phone.isEmpty) {
+      _showErrorDialog('Please fill in all the fields.');
+      return false;
     }
+    return true;
+  }
+
+  // Validate individual fields
+  bool _validateIndividualFields() {
+    final name = _nameController.text.trim();
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+    final phone = _phoneController.text.trim();
+
+    final emailRegex = RegExp(r"^[^@\s]+@(gmail\.com|yahoo\.com|eng\.asu\.edu\.eg)");
+    final passwordRegex = RegExp(r"^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[!@#\\$%^&*])[A-Za-z\d!@#\\$%^&*]{8,}");
+
+    if (name.length < 3) {
+      _showErrorDialog('Name must be at least 3 characters long.');
+      return false;
+    }
+
+    if (!emailRegex.hasMatch(email)) {
+      _showErrorDialog('Email must end with @gmail.com, @yahoo.com, or @eng.asu.edu.eg.');
+      return false;
+    }
+
+
+    if (!passwordRegex.hasMatch(password)) {
+      _showErrorDialog(
+        'Password must be at least 8 characters long, include at least 1 uppercase letter, 1 number, and 1 special character.',
+      );
+      return false;
+    }
+
+    if (phone.length != 11 || !RegExp(r"^\d{11}").hasMatch(phone)) {
+      _showErrorDialog('Phone number must be exactly 11 digits.');
+      return false;
+    }
+
+    return true;
+  }
+
+  // Check redundancy for email and phone in Firestore
+  Future<bool> _checkRedundancy(String email, String phone) async {
+    try {
+      // Check email redundancy
+      final emailQuery = await FirebaseFirestore.instance
+          .collection('users')
+          .where('email', isEqualTo: email)
+          .get();
+
+      if (emailQuery.docs.isNotEmpty) {
+        _showErrorDialog('The email is already in use.');
+        return false;
+      }
+
+      // Check phone redundancy
+      final phoneQuery = await FirebaseFirestore.instance
+          .collection('users')
+          .where('phone', isEqualTo: phone)
+          .get();
+
+      if (phoneQuery.docs.isNotEmpty) {
+        _showErrorDialog('The phone number is already in use.');
+        return false;
+      }
+
+      return true;
+    } catch (e) {
+      _showErrorDialog('An error occurred while checking redundancy. Please try again.');
+      return false;
+    }
+  }
+
+  // Sign-up logic
+  Future<void> _signUp() async {
+    if (!_validateAllFields()) return; // Check if all fields are filled
+    if (!_validateIndividualFields()) return; // Validate individual fields
+
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+    final phone = _phoneController.text.trim();
+    final name = _nameController.text.trim();
 
     setState(() {
       _isLoading = true;
     });
 
     try {
+      // Check for redundant email and phone number
+      if (!await _checkRedundancy(email, phone)) return;
+
       // Sign up the user using Firebase Authentication
-      UserCredential userCredential = await _authService.signUp(
-        _emailController.text.trim(),
-        _passwordController.text.trim(),
-      );
+      UserCredential userCredential = await _authService.signUp(email, password);
 
       final user = userCredential.user;
       final uid = user!.uid;
-      final email = user.email;
 
-      // Save user details to Firestore (including phone number and name)
+      // Save user details to Firestore
       await FirebaseFirestore.instance.collection('users').doc(uid).set({
         'uid': uid,
         'email': email,
-        'phone': _phoneController.text.trim(),
-        'name': _nameController.text.trim(), // Save name
+        'phone': phone,
+        'name': name,
       });
 
       // Navigate back to LoginPage after successful sign-up
@@ -73,6 +164,7 @@ class _SignUpPageState extends State<SignUpPage> {
     }
   }
 
+  // Show error dialog
   void _showErrorDialog(String message) {
     showDialog(
       context: context,
@@ -117,7 +209,7 @@ class _SignUpPageState extends State<SignUpPage> {
                 ),
                 SizedBox(height: 40),
                 TextField(
-                  controller: _nameController,  // Name input field
+                  controller: _nameController,
                   decoration: InputDecoration(
                     labelText: 'Name',
                     border: OutlineInputBorder(),
@@ -142,7 +234,7 @@ class _SignUpPageState extends State<SignUpPage> {
                 ),
                 SizedBox(height: 20),
                 TextField(
-                  controller: _phoneController,  // Phone number input field
+                  controller: _phoneController,
                   decoration: InputDecoration(
                     labelText: 'Phone Number',
                     border: OutlineInputBorder(),
