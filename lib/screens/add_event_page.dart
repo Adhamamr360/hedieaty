@@ -13,7 +13,6 @@ class AddEventPage extends StatefulWidget {
 class _AddEventPageState extends State<AddEventPage> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
-  final TextEditingController _locationController = TextEditingController();
   DateTime? _selectedDate;
   final DatabaseHelper _dbHelper = DatabaseHelper();
 
@@ -26,7 +25,6 @@ class _AddEventPageState extends State<AddEventPage> {
   Future<void> _saveEventLocally() async {
     if (_nameController.text.trim().isEmpty ||
         _descriptionController.text.trim().isEmpty ||
-        _locationController.text.trim().isEmpty ||
         _selectedDate == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Please fill all fields!')),
@@ -38,7 +36,6 @@ class _AddEventPageState extends State<AddEventPage> {
       'uid': widget.uid,
       'name': _nameController.text.trim(),
       'description': _descriptionController.text.trim(),
-      'location': _locationController.text.trim(),
       'date': _formatDate(_selectedDate!), // Store as "YYYY-MM-DD"
       'number_of_gifts': 0, // Initialized to 0
     };
@@ -62,7 +59,6 @@ class _AddEventPageState extends State<AddEventPage> {
   Future<void> _publishEventToFirestore() async {
     if (_nameController.text.trim().isEmpty ||
         _descriptionController.text.trim().isEmpty ||
-        _locationController.text.trim().isEmpty ||
         _selectedDate == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Please fill all fields!')),
@@ -74,7 +70,6 @@ class _AddEventPageState extends State<AddEventPage> {
       'uid': widget.uid,
       'name': _nameController.text.trim(),
       'description': _descriptionController.text.trim(),
-      'location': _locationController.text.trim(),
       'date': _formatDate(_selectedDate!), // Store as "YYYY-MM-DD"
       'number_of_gifts': 0, // Initialized to 0
     };
@@ -132,10 +127,6 @@ class _AddEventPageState extends State<AddEventPage> {
               controller: _descriptionController,
               decoration: InputDecoration(labelText: 'Description'),
             ),
-            TextField(
-              controller: _locationController,
-              decoration: InputDecoration(labelText: 'Location'),
-            ),
             SizedBox(height: 20),
             Row(
               children: [
@@ -159,14 +150,14 @@ class _AddEventPageState extends State<AddEventPage> {
                   onPressed: _saveEventLocally,
                   child: Text('Save Locally'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
+                    backgroundColor: Colors.blue,
                   ),
                 ),
                 ElevatedButton(
                   onPressed: _publishEventToFirestore,
                   child: Text('Publish'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Color(0xFFdf43a1),
+                    backgroundColor: Colors.green,
                   ),
                 ),
               ],

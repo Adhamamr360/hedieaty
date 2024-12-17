@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/db_helper.dart';
-import 'add_event_page.dart';
+import 'local_update_page.dart';  // New file for editing local events
+import 'firestore_update_page.dart';  // New file for editing Firestore events
+import 'add_event_page.dart';  // Add this import for the Add Event page
 
 class EventListPage extends StatefulWidget {
   @override
@@ -14,25 +16,17 @@ class _EventListPageState extends State<EventListPage> {
   final String uid = FirebaseAuth.instance.currentUser!.uid;
 
   List<Map<String, dynamic>> _localEvents = [];
-  Map<int, List<Map<String, dynamic>>> _localGifts = {};
   List<Map<String, dynamic>> _firestoreEvents = [];
 
   @override
   void initState() {
     super.initState();
-    _loadEventsAndGifts();
+    _loadEvents();
   }
 
-  Future<void> _loadEventsAndGifts() async {
-    // Load local events and their gifts
+  // Load both local and Firestore events
+  Future<void> _loadEvents() async {
     final localEvents = await _dbHelper.getEventsForUser(uid);
-    Map<int, List<Map<String, dynamic>>> localGifts = {};
-
-    for (final event in localEvents) {
-      localGifts[event['id']] = await _dbHelper.getGiftsByEventId(event['id']);
-    }
-
-    // Load Firestore events
     final firestoreEventsQuery = await FirebaseFirestore.instance
         .collection('events')
         .where('uid', isEqualTo: uid)
@@ -40,7 +34,6 @@ class _EventListPageState extends State<EventListPage> {
 
     setState(() {
       _localEvents = localEvents;
-      _localGifts = localGifts;
       _firestoreEvents = firestoreEventsQuery.docs.map((doc) {
         return {
           ...doc.data(),
@@ -50,48 +43,64 @@ class _EventListPageState extends State<EventListPage> {
     });
   }
 
-  Future<void> _publishEventToFirestore(Map<String, dynamic> event) async {
+  // Delete event based on whether it's local or in Firestore
+  Future<void> _deleteEvent(Map<String, dynamic> event) async {
     try {
-      // Add event to Firestore
-      final eventRef = await FirebaseFirestore.instance.collection('events').add({
-        'uid': uid,
-        'name': event['name'],
-        'description': event['description'],
-        'date': event['date'],
-        'location': event['location'],
-        'number_of_gifts': event['number_of_gifts'],
-        'created_at': Timestamp.now(),
-      });
+      // Check if the event has a Firestore ID (String) or if it's a local event (non-Firestore)
+      final isFirestore = event.containsKey('id') && event['id'] is String;
 
-      // Publish gifts associated with the event
-      final gifts = _localGifts[event['id']] ?? [];
-      for (final gift in gifts) {
-        await FirebaseFirestore.instance.collection('gifts').add({
-          'uid': uid,
-          'name': gift['name'],
-          'description': gift['description'],
-          'price': gift['price'],
-          'event': event['name'],
-          'event_id': eventRef.id, // Associate gift with the event in Firestore
-          'created_at': Timestamp.now(),
-        });
-        await _dbHelper.deleteGift(gift['id']); // Remove the gift from local DB
+      if (isFirestore) {
+        // Firestore event deletion
+        await FirebaseFirestore.instance.collection('events').doc(event['id']).delete();
+
+        // Also delete associated gifts from Firestore
+        final giftsQuery = await FirebaseFirestore.instance
+            .collection('gifts')
+            .where('event_id', isEqualTo: event['id'])
+            .get();
+        for (var gift in giftsQuery.docs) {
+          await gift.reference.delete();
+        }
+
+        print('Firestore event and associated gifts deleted successfully.');
+      } else {
+        // Local event deletion
+        await _dbHelper.deleteEvent(event['id']);
+        print('Local event deleted successfully.');
       }
 
-      // Remove the event from the local database
-      await _dbHelper.deleteEvent(event['id']);
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Event and its gifts published successfully!')),
-      );
-
-      _loadEventsAndGifts(); // Reload data after publishing
+      // Notify the user and reload the event list
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Event deleted successfully!')));
+      _loadEvents();  // Reload events after deletion
     } catch (e) {
-      print('Error publishing event: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to publish event.')),
-      );
+      print('Error deleting event: $e');
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to delete event.')));
     }
+  }
+
+  void _editEvent(Map<String, dynamic> event) async {
+    // Check if the event has a Firestore ID and Firestore metadata
+    final isFirestore = event.containsKey('id') && event['id'] is String;
+
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => isFirestore
+            ? FirestoreEventPage(event: event)
+            : LocalEventPage(event: event),
+      ),
+    );
+
+    _loadEvents();
+  }
+
+
+
+
+  // Check if the event is upcoming or past
+  String _getEventStatus(DateTime eventDate) {
+    final now = DateTime.now();
+    return eventDate.isAfter(now) ? 'Upcoming' : 'Past';
   }
 
   @override
@@ -106,14 +115,14 @@ class _EventListPageState extends State<EventListPage> {
                 await Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => AddEventPage(uid: uid),
+                    builder: (context) => AddEventPage(uid: uid), // Navigate to Add Event page
                   ),
                 );
-                _loadEventsAndGifts(); // Reload events after adding
+                await _loadEvents();
               },
               child: Text('Add Event'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Color(0xFFdf43a1),
+                backgroundColor: Colors.orange,
                 textStyle: TextStyle(fontSize: 16),
               ),
             ),
@@ -130,33 +139,20 @@ class _EventListPageState extends State<EventListPage> {
                     ),
                   ),
                 ..._localEvents.map((event) {
-                  final gifts = _localGifts[event['id']] ?? [];
-                  return Card(
-                    margin: EdgeInsets.all(8.0),
-                    child: ExpansionTile(
-                      title: Text(event['name']),
-                      subtitle: Text('${event['description']} - ${event['date']}'),
+                  final eventDate = DateTime.parse(event['date']);
+                  return ListTile(
+                    title: Text(event['name']),
+                    subtitle: Text(_getEventStatus(eventDate)),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        if (gifts.isNotEmpty)
-                          ...gifts.map((gift) => ListTile(
-                            title: Text(gift['name']),
-                            subtitle:
-                            Text('${gift['description']} - \$${gift['price']}'),
-                          )),
-                        if (gifts.isEmpty)
-                          Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: Text('No gifts assigned to this event.'),
-                          ),
-                        Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: ElevatedButton(
-                            onPressed: () => _publishEventToFirestore(event),
-                            child: Text('Publish Event'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Color(0xFFdf43a1),
-                            ),
-                          ),
+                        IconButton(
+                          icon: Icon(Icons.edit),
+                          onPressed: () => _editEvent(event),
+                        ),
+                        IconButton(
+                          icon: Icon(Icons.delete),
+                          onPressed: () => _deleteEvent(event),
                         ),
                       ],
                     ),
@@ -171,39 +167,20 @@ class _EventListPageState extends State<EventListPage> {
                     ),
                   ),
                 ..._firestoreEvents.map((event) {
-                  return Card(
-                    margin: EdgeInsets.all(8.0),
-                    child: ExpansionTile(
-                      title: Text(event['name']),
-                      subtitle: Text('${event['description']} - ${event['date']}'),
+                  final eventDate = DateTime.parse(event['date']);
+                  return ListTile(
+                    title: Text(event['name']),
+                    subtitle: Text(_getEventStatus(eventDate)),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        StreamBuilder<QuerySnapshot>(
-                          stream: FirebaseFirestore.instance
-                              .collection('gifts')
-                              .where('event_id', isEqualTo: event['id'])
-                              .snapshots(),
-                          builder: (context, snapshot) {
-                            if (snapshot.connectionState == ConnectionState.waiting) {
-                              return Center(child: CircularProgressIndicator());
-                            }
-                            final gifts = snapshot.data?.docs ?? [];
-                            if (gifts.isEmpty) {
-                              return Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Text('No gifts assigned to this event.'),
-                              );
-                            }
-                            return Column(
-                              children: gifts.map((giftDoc) {
-                                final gift = giftDoc.data() as Map<String, dynamic>;
-                                return ListTile(
-                                  title: Text(gift['name']),
-                                  subtitle: Text(
-                                      '${gift['description']} - \$${gift['price']}'),
-                                );
-                              }).toList(),
-                            );
-                          },
+                        IconButton(
+                          icon: Icon(Icons.edit),
+                          onPressed: () => _editEvent(event),
+                        ),
+                        IconButton(
+                          icon: Icon(Icons.delete),
+                          onPressed: () => _deleteEvent(event),
                         ),
                       ],
                     ),

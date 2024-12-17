@@ -20,7 +20,6 @@ class _LoginPageState extends State<LoginPage> {
   bool _isLoading = false;
 
   Future<void> _login() async {
-    // Input validation
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
 
@@ -35,37 +34,40 @@ class _LoginPageState extends State<LoginPage> {
 
     try {
       // Attempt to log in with email and password
-      await _authService.signIn(email, password);
+      UserCredential userCredential = await _authService.signIn(email, password);
 
-      // Get the current user's UID
-      final uid = FirebaseAuth.instance.currentUser!.uid;
+      // Check if the user is successfully signed in
+      if (userCredential.user != null) {
+        // Get the current user's UID
+        final uid = userCredential.user!.uid;
 
-      // Fetch the user's data from Firestore
-      final userDoc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+        // Fetch the user's data from Firestore
+        final userDoc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
 
-      if (userDoc.exists) {
-        final userData = userDoc.data()!;
+        if (userDoc.exists) {
+          final userData = userDoc.data()!;
 
-        // Save or update the user data in SQLite
-        await _dbHelper.insertOrUpdateUser({
-          'uid': uid,
-          'name': userData['name'] ?? 'N/A',
-          'email': userData['email'] ?? 'N/A',
-          'phone': userData['phone'] ?? 'N/A',
-        });
+          // Save or update the user data in SQLite
+          await _dbHelper.insertOrUpdateUser({
+            'uid': uid,
+            'name': userData['name'] ?? 'N/A',
+            'email': userData['email'] ?? 'N/A',
+            'phone': userData['phone'] ?? 'N/A',
+          });
 
-        print('User data saved or updated in SQLite.');
-      } else {
-        _showErrorDialog('User profile not found.');
-        return;
+          print('User data saved or updated in SQLite.');
+        } else {
+          _showErrorDialog('User profile not found.');
+          return;
+        }
+
+        // Navigate to HomePage
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (context) => HomePage()),
+              (route) => false,
+        );
       }
-
-      // Navigate to HomePage
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (context) => HomePage()),
-            (route) => false,
-      );
     } on FirebaseAuthException catch (e) {
       String errorMessage = 'Incorrect email or password. Please try again.';
       _showErrorDialog(errorMessage);
@@ -78,6 +80,7 @@ class _LoginPageState extends State<LoginPage> {
       });
     }
   }
+
 
 
   void _showErrorDialog(String message) {

@@ -44,7 +44,6 @@ class DatabaseHelper {
       uid TEXT NOT NULL,
       name TEXT NOT NULL,
       description TEXT,
-      location TEXT,
       date TEXT,
       number_of_gifts INTEGER DEFAULT 0)''');
   }
@@ -64,7 +63,6 @@ class DatabaseHelper {
         uid TEXT NOT NULL,
         name TEXT NOT NULL,
         description TEXT,
-        location TEXT,
         date TEXT,
         number_of_gifts INTEGER DEFAULT 0)''');
     }
@@ -269,4 +267,15 @@ class DatabaseHelper {
     final db = await database;
     await db.delete('events', where: 'id = ?', whereArgs: [id]);
   }
+
+  Future<void> updateEvent(Map<String, dynamic> event) async {
+    final db = await database;
+    await db.update(
+      'events',
+      event, // The updated event data
+      where: 'id = ?', // Update the event by matching the id
+      whereArgs: [event['id']], // The ID to find the event
+    );
+  }
+
 }

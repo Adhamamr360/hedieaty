@@ -89,8 +89,10 @@ class _AddGiftPageState extends State<AddGiftPage> {
       'name': _nameController.text.trim(),
       'description': _descriptionController.text.trim(),
       'price': double.parse(_priceController.text.trim()),
-      'event': _firestoreEvents.firstWhere((event) => event['id'] == _selectedFirestoreEvent)['name'], // Get event name
+      'event': _firestoreEvents
+          .firstWhere((event) => event['id'] == _selectedFirestoreEvent)['name'], // Get event name
       'event_id': _selectedFirestoreEvent, // Store the event ID in a separate field
+      'pledged_status': 'not-pledged', // Default status for the gift
       'created_at': Timestamp.now(),
     };
 
@@ -114,6 +116,7 @@ class _AddGiftPageState extends State<AddGiftPage> {
       );
     }
   }
+
 
 
   bool _validateInputs({required bool isLocal}) {
@@ -208,9 +211,9 @@ class _AddGiftPageState extends State<AddGiftPage> {
                 ),
                 ElevatedButton(
                   onPressed: _publishGiftToFirestore,
-                  child: Text('Publish to Firestore'),
+                  child: Text('Publish'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Color(0xFFdf43a1),
+                    backgroundColor: Colors.green,
                   ),
                 ),
               ],

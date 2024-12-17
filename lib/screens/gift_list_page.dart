@@ -62,7 +62,7 @@ class _GiftListPageState extends State<GiftListPage> {
               },
               child: Text('Add Gift'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Color(0xFFdf43a1),
+                backgroundColor: Colors.orange,
                 textStyle: TextStyle(fontSize: 16),
               ),
             ),
