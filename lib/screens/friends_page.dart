@@ -176,6 +176,14 @@ class _HomePageState extends State<HomePage> {
                             .doc(friendId)
                             .set({});
 
+                        // Add logged-in user to the friend's friend list
+                        await FirebaseFirestore.instance
+                            .collection('users')
+                            .doc(friendId)
+                            .collection('friends')
+                            .doc(uid)
+                            .set({});
+
                         // Reload the friends list
                         _loadFriends();
 
