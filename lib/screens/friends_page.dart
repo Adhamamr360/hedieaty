@@ -53,8 +53,20 @@ class _HomePageState extends State<HomePage> {
 
           // Filter to get only upcoming events
           final upcomingEvents = eventsQuery.docs.where((eventDoc) {
-            final eventDate = (eventDoc['date'] as Timestamp).toDate();
-            return eventDate.isAfter(DateTime.now()); // Check if event is upcoming
+            String eventDateString = eventDoc['date']; // Event date as string
+
+            DateTime eventDate;
+
+            try {
+              // Attempt to parse the event date string in 'yyyy-MM-dd' format
+              eventDate = DateTime.parse(eventDateString);
+            } catch (e) {
+              print('Error parsing event date: $e');
+              return false; // Return false if date parsing fails
+            }
+
+            // Now compare the eventDate with the current date
+            return eventDate.isAfter(DateTime.now()); // Check if the event is upcoming
           }).toList();
 
           // Add friend and upcoming event count to the list
@@ -75,6 +87,7 @@ class _HomePageState extends State<HomePage> {
       print('Error loading friends: $e');
     }
   }
+
 
 
   void _onItemTapped(int index) {
@@ -139,22 +152,38 @@ class _HomePageState extends State<HomePage> {
                         SnackBar(content: Text('No user found with this number.')),
                       );
                     } else {
-                      // Add friend to logged-in user's friend list
                       final friendId = querySnapshot.docs.first.id;
-                      await FirebaseFirestore.instance
+
+                      // Check if the friend is already in the user's friend list
+                      final friendDoc = await FirebaseFirestore.instance
                           .collection('users')
                           .doc(uid)
                           .collection('friends')
                           .doc(friendId)
-                          .set({});
+                          .get();
 
-                      // Reload the friends list
-                      _loadFriends();
+                      if (friendDoc.exists) {
+                        // Friend already added
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Friend already added!')),
+                        );
+                      } else {
+                        // Add friend to logged-in user's friend list
+                        await FirebaseFirestore.instance
+                            .collection('users')
+                            .doc(uid)
+                            .collection('friends')
+                            .doc(friendId)
+                            .set({});
 
-                      Navigator.pop(context); // Close dialog
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Friend added successfully!')),
-                      );
+                        // Reload the friends list
+                        _loadFriends();
+
+                        Navigator.pop(context); // Close dialog
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Friend added successfully!')),
+                        );
+                      }
                     }
                   } catch (e) {
                     print('Error adding friend: $e');
@@ -235,6 +264,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   // Build the Friends Page
+// Build the Friends Page
   Widget _buildFriendsPage() {
     return _friends.isEmpty
         ? Center(
@@ -268,4 +298,5 @@ class _HomePageState extends State<HomePage> {
       },
     );
   }
+
 }

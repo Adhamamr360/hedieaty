@@ -13,6 +13,7 @@ class _FirestoreEventPageState extends State<FirestoreEventPage> {
   final _nameController = TextEditingController();
   final _dateController = TextEditingController();
   final _descriptionController = TextEditingController();
+  final _locationController = TextEditingController();
 
   @override
   void initState() {
@@ -20,6 +21,7 @@ class _FirestoreEventPageState extends State<FirestoreEventPage> {
     _nameController.text = widget.event['name'];
     _dateController.text = widget.event['date'];
     _descriptionController.text = widget.event['description'];
+    _locationController.text = widget.event['location'] ?? '';
   }
 
   Future<void> _saveEvent() async {
@@ -31,13 +33,7 @@ class _FirestoreEventPageState extends State<FirestoreEventPage> {
     }
 
     try {
-      print('Updating document ID: ${widget.event['id']}');
-      print({
-        'name': _nameController.text,
-        'date': _nameController.text,
-        'description': _descriptionController.text,
-      });
-
+      // Update the event in Firestore
       await FirebaseFirestore.instance
           .collection('events')
           .doc(widget.event['id'])
@@ -45,26 +41,36 @@ class _FirestoreEventPageState extends State<FirestoreEventPage> {
         'name': _nameController.text,
         'date': _dateController.text,
         'description': _descriptionController.text,
+        'location': _locationController.text,
       });
 
-      print('Event updated successfully');
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Event updated successfully.')));
+      // Update the associated gifts in Firestore
+      final giftsQuery = await FirebaseFirestore.instance
+          .collection('gifts')
+          .where('event_id', isEqualTo: widget.event['id'])
+          .get();
 
+      for (var gift in giftsQuery.docs) {
+        await gift.reference.update({
+          'event': _nameController.text,  // Update the event name
+          // Add any other necessary fields to update in the gifts
+        });
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Event and associated gifts updated successfully.')));
       Navigator.pop(context);
     } catch (e) {
       print('Firestore Error: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to update event: $e')));
+          SnackBar(content: Text('Failed to update event and associated gifts.')));
     }
   }
-
-
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Edit Event')),
+      appBar: AppBar(title: Text('Edit Firestore Event')),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -80,6 +86,10 @@ class _FirestoreEventPageState extends State<FirestoreEventPage> {
             TextField(
               controller: _descriptionController,
               decoration: InputDecoration(labelText: 'Description'),
+            ),
+            TextField(
+              controller: _locationController,
+              decoration: InputDecoration(labelText: 'Location'),
             ),
             ElevatedButton(
               onPressed: _saveEvent,

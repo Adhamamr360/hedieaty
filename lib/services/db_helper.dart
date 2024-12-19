@@ -27,47 +27,55 @@ class DatabaseHelper {
   Future<void> _onCreate(Database db, int version) async {
     print("Creating database tables...");
     await db.execute('''CREATE TABLE users (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      uid TEXT NOT NULL,
-      name TEXT,
-      email TEXT NOT NULL,
-      phone TEXT)''');
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    uid TEXT NOT NULL,
+    name TEXT,
+    email TEXT NOT NULL,
+    phone TEXT)''');
     await db.execute('''CREATE TABLE gifts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    uid TEXT NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT,
+    price REAL,
+    event TEXT,
+    event_id INTEGER,  
+    category TEXT)'''); // Added category column
+    await db.execute('''CREATE TABLE events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    uid TEXT NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT,
+    date TEXT,
+    location TEXT,
+    number_of_gifts INTEGER DEFAULT 0)''');
+  }
+
+  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    print("Upgrading database from version $oldVersion to $newVersion...");
+    if (oldVersion < 2) {
+      await db.execute('''CREATE TABLE IF NOT EXISTS gifts (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       uid TEXT NOT NULL,
       name TEXT NOT NULL,
       description TEXT,
       price REAL,
       event TEXT)''');
-    await db.execute('''CREATE TABLE events (
+      await db.execute('''CREATE TABLE IF NOT EXISTS events (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       uid TEXT NOT NULL,
       name TEXT NOT NULL,
       description TEXT,
       date TEXT,
+      location TEXT,
       number_of_gifts INTEGER DEFAULT 0)''');
-  }
-
-  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    print("Upgrading database from version \$oldVersion to \$newVersion...");
-    if (oldVersion < 2) {
-      await db.execute('''CREATE TABLE IF NOT EXISTS gifts (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        uid TEXT NOT NULL,
-        name TEXT NOT NULL,
-        description TEXT,
-        price REAL,
-        event TEXT)''');
-      await db.execute('''CREATE TABLE IF NOT EXISTS events (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        uid TEXT NOT NULL,
-        name TEXT NOT NULL,
-        description TEXT,
-        date TEXT,
-        number_of_gifts INTEGER DEFAULT 0)''');
     }
     if (oldVersion < 3) {
       await db.execute('''ALTER TABLE events ADD COLUMN number_of_gifts INTEGER DEFAULT 0''');
+    }
+    if (oldVersion < 4) {
+      // Add category column to gifts table if not already present
+      await db.execute('''ALTER TABLE gifts ADD COLUMN category TEXT''');
     }
   }
 
@@ -151,7 +159,7 @@ class DatabaseHelper {
     }
   }
 
-  // ================= Gifts =================
+// ================= Gifts =================
 
   Future<Map<String, String>> getEventNamesForUser(String uid) async {
     final db = await database;
@@ -168,9 +176,10 @@ class DatabaseHelper {
     return {for (var event in events) event['id'].toString(): event['name'].toString()};
   }
 
-
   Future<void> insertGift(Map<String, dynamic> gift) async {
     final db = await database;
+
+    // Insert the gift into the 'gifts' table
     await db.insert('gifts', gift, conflictAlgorithm: ConflictAlgorithm.replace);
 
     // Update the event's gift count if the gift has an event
@@ -181,29 +190,33 @@ class DatabaseHelper {
 
   Future<List<Map<String, dynamic>>> getGiftsForUser(String uid) async {
     final db = await database;
+    // Fetch all gifts related to the user
     return await db.query('gifts', where: 'uid = ?', whereArgs: [uid]);
   }
 
   Future<List<Map<String, dynamic>>> getGiftsForEvent(String uid, String event) async {
     final db = await database;
+    // Fetch all gifts related to a specific event and user
     return await db.query('gifts', where: 'uid = ? AND event = ?', whereArgs: [uid, event]);
   }
 
-  Future<void> deleteGift(int id) async {
+  Future<void> deleteGift(Map<String, dynamic> gift) async {
     final db = await database;
 
+    // Ensure the gift has an 'id' for the deletion
+    if (!gift.containsKey('id')) {
+      throw ArgumentError('Gift must have an "id" to delete.');
+    }
+
     // Retrieve the gift to get the associated event before deleting
-    final gift = await db.query('gifts', where: 'id = ?', whereArgs: [id]);
-    if (gift.isNotEmpty) {
-      final eventName = gift.first['event'] as String?;
+    final eventName = gift['event'] as String?;
 
-      // Delete the gift
-      await db.delete('gifts', where: 'id = ?', whereArgs: [id]);
+    // Delete the gift from the database
+    await db.delete('gifts', where: 'id = ?', whereArgs: [gift['id']]);
 
-      // Update the event's gift count if it is associated with an event
-      if (eventName != null) {
-        await updateEventGiftCount(eventName, -1); // Decrease by 1 gift
-      }
+    // Update the event's gift count if it is associated with an event
+    if (eventName != null) {
+      await updateEventGiftCount(eventName, -1); // Decrease by 1 gift
     }
   }
 
@@ -211,10 +224,36 @@ class DatabaseHelper {
     final db = await database;
     return await db.query(
       'gifts',
-      where: 'event = ?',
-      whereArgs: [eventId.toString()], // Ensure event ID is passed as a string
+      where: 'event_id = ?',  // Assuming the gifts table has an 'event_id' column
+      whereArgs: [eventId],    // Use eventId to fetch the associated gifts
     );
   }
+
+
+  Future<void> updateGift(Map<String, dynamic> gift) async {
+    final db = await database;
+
+    // Ensure the gift has an 'id' for the update
+    if (!gift.containsKey('id')) {
+      throw ArgumentError('Gift must have an "id" to update.');
+    }
+
+    // Perform the update
+    await db.update(
+      'gifts',
+      {
+        'name': gift['name'],
+        'description': gift['description'],
+        'price': gift['price'],
+        'category': gift['category'],
+      },
+      where: 'id = ?',
+      whereArgs: [gift['id']], // Match by gift ID
+    );
+  }
+
+
+
 
 
   // ================= Events =================

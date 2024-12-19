@@ -13,18 +13,18 @@ class AddEventPage extends StatefulWidget {
 class _AddEventPageState extends State<AddEventPage> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
+  final TextEditingController _locationController = TextEditingController();
   DateTime? _selectedDate;
   final DatabaseHelper _dbHelper = DatabaseHelper();
 
-  // Format date as "YYYY-MM-DD" for storage
   String _formatDate(DateTime date) {
     return "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
   }
 
-  // Save event data locally in SQLite
   Future<void> _saveEventLocally() async {
     if (_nameController.text.trim().isEmpty ||
         _descriptionController.text.trim().isEmpty ||
+        _locationController.text.trim().isEmpty ||
         _selectedDate == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Please fill all fields!')),
@@ -36,17 +36,17 @@ class _AddEventPageState extends State<AddEventPage> {
       'uid': widget.uid,
       'name': _nameController.text.trim(),
       'description': _descriptionController.text.trim(),
-      'date': _formatDate(_selectedDate!), // Store as "YYYY-MM-DD"
+      'location': _locationController.text.trim(),
+      'date': _formatDate(_selectedDate!),
       'number_of_gifts': 0, // Initialized to 0
     };
 
     try {
-      // Save to SQLite
       await _dbHelper.insertEvent(eventData);
 
       ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Event added locally!')));
-      Navigator.pop(context); // Return to EventListPage
+      Navigator.pop(context);
     } catch (e) {
       print('Error saving event locally: $e');
       ScaffoldMessenger.of(context).showSnackBar(
@@ -55,10 +55,10 @@ class _AddEventPageState extends State<AddEventPage> {
     }
   }
 
-  // Publish event data to Firestore
   Future<void> _publishEventToFirestore() async {
     if (_nameController.text.trim().isEmpty ||
         _descriptionController.text.trim().isEmpty ||
+        _locationController.text.trim().isEmpty ||
         _selectedDate == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Please fill all fields!')),
@@ -70,12 +70,12 @@ class _AddEventPageState extends State<AddEventPage> {
       'uid': widget.uid,
       'name': _nameController.text.trim(),
       'description': _descriptionController.text.trim(),
-      'date': _formatDate(_selectedDate!), // Store as "YYYY-MM-DD"
+      'location': _locationController.text.trim(),
+      'date': _formatDate(_selectedDate!),
       'number_of_gifts': 0, // Initialized to 0
     };
 
     try {
-      // Save to Firestore
       await FirebaseFirestore.instance.collection('events').add({
         ...eventData,
         'created_at': Timestamp.now(),
@@ -83,7 +83,7 @@ class _AddEventPageState extends State<AddEventPage> {
 
       ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Event published to Firestore!')));
-      Navigator.pop(context); // Return to EventListPage
+      Navigator.pop(context);
     } catch (e) {
       print('Error publishing event to Firestore: $e');
       ScaffoldMessenger.of(context).showSnackBar(
@@ -92,7 +92,6 @@ class _AddEventPageState extends State<AddEventPage> {
     }
   }
 
-  // Pick date for the event
   Future<void> _pickDate() async {
     final selectedDate = await showDatePicker(
       context: context,
@@ -127,13 +126,17 @@ class _AddEventPageState extends State<AddEventPage> {
               controller: _descriptionController,
               decoration: InputDecoration(labelText: 'Description'),
             ),
+            TextField(
+              controller: _locationController,
+              decoration: InputDecoration(labelText: 'Location'),
+            ),
             SizedBox(height: 20),
             Row(
               children: [
                 Text(
                   _selectedDate == null
                       ? 'No date selected'
-                      : 'Date: ${_formatDate(_selectedDate!)}', // Show formatted date
+                      : 'Date: ${_formatDate(_selectedDate!)}',
                 ),
                 Spacer(),
                 TextButton(
@@ -150,14 +153,16 @@ class _AddEventPageState extends State<AddEventPage> {
                   onPressed: _saveEventLocally,
                   child: Text('Save Locally'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
+                    backgroundColor: Colors.purpleAccent,
+                    foregroundColor: Colors.black
                   ),
                 ),
                 ElevatedButton(
                   onPressed: _publishEventToFirestore,
                   child: Text('Publish'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
+                    backgroundColor: Colors.purpleAccent,
+                      foregroundColor: Colors.black
                   ),
                 ),
               ],

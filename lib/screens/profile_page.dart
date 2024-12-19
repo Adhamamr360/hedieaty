@@ -163,6 +163,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   children: [
                     if (gifts.isNotEmpty)
                       ...gifts.map((gift) => ListTile(
+                        leading: Icon(Icons.card_giftcard, color: Colors.purple), // Gift icon next to the gift
                         title: Text(gift['name']),
                         subtitle: Text(
                             '${gift['description']} - \$${gift['price']}'),
@@ -189,7 +190,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 margin: EdgeInsets.all(8.0),
                 child: ExpansionTile(
                   title: Text(event['name']),
-                  subtitle: Text('Number of Gifts: ${event['number_of_gifts']}'),
+                  subtitle: Text('${event['description']} - ${event['date']}'),
                   children: [
                     StreamBuilder<QuerySnapshot>(
                       stream: FirebaseFirestore.instance
@@ -212,6 +213,7 @@ class _ProfilePageState extends State<ProfilePage> {
                           children: gifts.map((giftDoc) {
                             final gift = giftDoc.data() as Map<String, dynamic>;
                             return ListTile(
+                              leading: Icon(Icons.card_giftcard, color: Colors.purple),
                               title: Text(gift['name']),
                               subtitle: Text(
                                   '${gift['description']} - \$${gift['price']}'),

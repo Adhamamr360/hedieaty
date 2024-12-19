@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/db_helper.dart';
-import 'local_update_page.dart';  // New file for editing local events
-import 'firestore_update_page.dart';  // New file for editing Firestore events
-import 'add_event_page.dart';  // Add this import for the Add Event page
+import 'local_updateEvent_page.dart';
+import 'firestore_updateEvent_page.dart';
+import 'add_event_page.dart';
 
 class EventListPage extends StatefulWidget {
   @override
@@ -24,9 +24,11 @@ class _EventListPageState extends State<EventListPage> {
     _loadEvents();
   }
 
-  // Load both local and Firestore events
   Future<void> _loadEvents() async {
+    // Load local events from SQLite
     final localEvents = await _dbHelper.getEventsForUser(uid);
+
+    // Load Firestore events
     final firestoreEventsQuery = await FirebaseFirestore.instance
         .collection('events')
         .where('uid', isEqualTo: uid)
@@ -43,43 +45,103 @@ class _EventListPageState extends State<EventListPage> {
     });
   }
 
-  // Delete event based on whether it's local or in Firestore
+  Future<void> _publishLocalEvent(Map<String, dynamic> event) async {
+    try {
+      // Add the event to Firestore
+      final eventRef = await FirebaseFirestore.instance.collection('events').add({
+        'uid': uid,
+        'name': event['name'],
+        'description': event['description'],
+        'date': event['date'],
+        'location': event['location'],
+        'number_of_gifts': event['number_of_gifts'],
+        'created_at': Timestamp.now(),
+      });
+
+      // Retrieve associated gifts from SQLite
+      final gifts = await _dbHelper.getGiftsByEventId(event['id']);
+
+      // Add the gifts to Firestore
+      for (final gift in gifts) {
+        await FirebaseFirestore.instance.collection('gifts').add({
+          'uid': uid,
+          'name': gift['name'],
+          'description': gift['description'],
+          'price': gift['price'],
+          'event': event['name'],
+          'event_id': eventRef.id,
+          'status': 'not_pledged',
+          'created_at': Timestamp.now(),
+        });
+        // Delete the gift from SQLite
+        await _dbHelper.deleteGift(gift['id']);
+      }
+
+      // Delete the local event from SQLite
+      await _dbHelper.deleteEvent(event['id']);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Local event published to Firestore!')),
+      );
+
+      // Reload events after publishing
+      _loadEvents();
+    } catch (e) {
+      print('Error publishing local event: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to publish local event.')),
+      );
+    }
+  }
+
+  String _getEventStatus(String eventDate) {
+    final DateTime eventDateTime = DateTime.parse(eventDate);
+    final DateTime currentDate = DateTime.now();
+
+    if (eventDateTime.isBefore(currentDate)) {
+      return 'Past';
+    } else {
+      return 'Upcoming';
+    }
+  }
+
   Future<void> _deleteEvent(Map<String, dynamic> event) async {
     try {
-      // Check if the event has a Firestore ID (String) or if it's a local event (non-Firestore)
       final isFirestore = event.containsKey('id') && event['id'] is String;
+      final eventId = event['id'];  // This will either be an integer or a string
 
       if (isFirestore) {
-        // Firestore event deletion
-        await FirebaseFirestore.instance.collection('events').doc(event['id']).delete();
+        // Delete event from Firestore using document ID (String)
+        await FirebaseFirestore.instance.collection('events').doc(eventId).delete();
 
-        // Also delete associated gifts from Firestore
+        // Delete associated gifts from Firestore
         final giftsQuery = await FirebaseFirestore.instance
             .collection('gifts')
-            .where('event_id', isEqualTo: event['id'])
+            .where('event_id', isEqualTo: eventId)
             .get();
         for (var gift in giftsQuery.docs) {
           await gift.reference.delete();
         }
-
-        print('Firestore event and associated gifts deleted successfully.');
       } else {
-        // Local event deletion
-        await _dbHelper.deleteEvent(event['id']);
-        print('Local event deleted successfully.');
+        // Delete event from SQLite using local event ID (int)
+        await _dbHelper.deleteEvent(eventId);
+
+        // Delete associated gifts from SQLite
+        final gifts = await _dbHelper.getGiftsByEventId(eventId);
+        for (var gift in gifts) {
+          await _dbHelper.deleteGift(gift);  // Assuming gift['id'] is an integer
+        }
       }
 
-      // Notify the user and reload the event list
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Event deleted successfully!')));
-      _loadEvents();  // Reload events after deletion
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Event and its gifts deleted successfully!')));
+      _loadEvents();
     } catch (e) {
       print('Error deleting event: $e');
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to delete event.')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to delete event and its gifts.')));
     }
   }
 
   void _editEvent(Map<String, dynamic> event) async {
-    // Check if the event has a Firestore ID and Firestore metadata
     final isFirestore = event.containsKey('id') && event['id'] is String;
 
     await Navigator.push(
@@ -94,15 +156,6 @@ class _EventListPageState extends State<EventListPage> {
     _loadEvents();
   }
 
-
-
-
-  // Check if the event is upcoming or past
-  String _getEventStatus(DateTime eventDate) {
-    final now = DateTime.now();
-    return eventDate.isAfter(now) ? 'Upcoming' : 'Past';
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -115,14 +168,15 @@ class _EventListPageState extends State<EventListPage> {
                 await Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => AddEventPage(uid: uid), // Navigate to Add Event page
+                    builder: (context) => AddEventPage(uid: uid),
                   ),
                 );
                 await _loadEvents();
               },
               child: Text('Add Event'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.orange,
+                backgroundColor: Colors.pinkAccent,
+                foregroundColor: Colors.black,
                 textStyle: TextStyle(fontSize: 16),
               ),
             ),
@@ -139,10 +193,9 @@ class _EventListPageState extends State<EventListPage> {
                     ),
                   ),
                 ..._localEvents.map((event) {
-                  final eventDate = DateTime.parse(event['date']);
                   return ListTile(
                     title: Text(event['name']),
-                    subtitle: Text(_getEventStatus(eventDate)),
+                    subtitle: Text('${event['date']} - Status: ${_getEventStatus(event['date'])}'),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -153,6 +206,10 @@ class _EventListPageState extends State<EventListPage> {
                         IconButton(
                           icon: Icon(Icons.delete),
                           onPressed: () => _deleteEvent(event),
+                        ),
+                        IconButton(
+                          icon: Icon(Icons.publish),
+                          onPressed: () => _publishLocalEvent(event),
                         ),
                       ],
                     ),
@@ -167,16 +224,14 @@ class _EventListPageState extends State<EventListPage> {
                     ),
                   ),
                 ..._firestoreEvents.map((event) {
-                  final eventDate = DateTime.parse(event['date']);
                   return ListTile(
                     title: Text(event['name']),
-                    subtitle: Text(_getEventStatus(eventDate)),
+                    subtitle: Text('${event['date']} - Status: ${_getEventStatus(event['date'])}'),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         IconButton(
-                          icon: Icon(Icons.edit),
-                          onPressed: () => _editEvent(event),
+                          icon: Icon(Icons.edit),                          onPressed: () => _editEvent(event),
                         ),
                         IconButton(
                           icon: Icon(Icons.delete),
