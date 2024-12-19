@@ -111,9 +111,9 @@ class _GiftListPageState extends State<GiftListPage> {
 
       switch (status) {
         case 'pledged':
-          return Colors.yellow.withOpacity(0.2);
-        case 'purchased':
           return Colors.green.withOpacity(0.2);
+        case 'purchased':
+          return Colors.red.withOpacity(0.2);
         default:
           return Colors.grey.shade100; // Default for Firestore "not_pledged"
       }

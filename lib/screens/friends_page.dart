@@ -263,8 +263,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // Build the Friends Page
-// Build the Friends Page
   Widget _buildFriendsPage() {
     return _friends.isEmpty
         ? Center(
@@ -280,6 +278,10 @@ class _HomePageState extends State<HomePage> {
         return Card(
           margin: EdgeInsets.all(8.0),
           child: ListTile(
+            leading: CircleAvatar(
+              backgroundImage: AssetImage('assets/images/default_friend.png'), // Your asset image
+              radius: 25, // Adjust the radius as needed
+            ),
             title: Text(friend['name']),
             subtitle: Text('${friend['eventCount']} upcoming events'),
             onTap: () {

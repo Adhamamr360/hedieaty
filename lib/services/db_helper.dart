@@ -134,6 +134,23 @@ class DatabaseHelper {
     await db.delete('users', where: 'uid = ?', whereArgs: [uid]);
   }
 
+  // Add this method to DatabaseHelper class
+  Future<void> updateUser(Map<String, dynamic> user) async {
+    final db = await database;
+
+    // Update the user record in the database
+    await db.update(
+      'users',
+      {
+        'name': user['name'],
+        'phone': user['phone'],
+      },
+      where: 'uid = ?',
+      whereArgs: [user['uid']],
+    );
+  }
+
+
   Future<void> insertOrUpdateUser(Map<String, dynamic> user) async {
     final db = await database;
 

@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/db_helper.dart';
-import 'local_updateEvent_page.dart';
-import 'firestore_updateEvent_page.dart';
+import 'updateLocalEvent_page.dart';
+import 'updateFirestoreEvent_page.dart';
 import 'add_event_page.dart';
 
 class EventListPage extends StatefulWidget {

@@ -1,9 +1,10 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/auth_services.dart';
 import '../services/db_helper.dart';
 import 'login_page.dart';
+import 'my_pledged_gifts_page.dart';
 
 class ProfilePage extends StatefulWidget {
   @override
@@ -96,6 +97,100 @@ class _ProfilePageState extends State<ProfilePage> {
     });
   }
 
+  Future<void> _editProfile() async {
+    final nameController = TextEditingController(text: name);
+    final phoneController = TextEditingController(text: phone);
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Edit Profile'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                decoration: InputDecoration(labelText: 'Name'),
+              ),
+              TextField(
+                controller: phoneController,
+                decoration: InputDecoration(labelText: 'Phone'),
+                keyboardType: TextInputType.phone,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final newName = nameController.text.trim();
+                final newPhone = phoneController.text.trim();
+
+                // Validation checks
+                if (newName.isEmpty || newPhone.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Please fill in all fields.')),
+                  );
+                  return;
+                }
+
+                if (newName.length < 3) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Name must be at least 3 characters long.')),
+                  );
+                  return;
+                }
+
+                if (newPhone.length < 11 || !RegExp(r'^\d+$').hasMatch(newPhone)) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Phone number must be at least 11 digits.')),
+                  );
+                  return;
+                }
+
+                try {
+                  final uid = FirebaseAuth.instance.currentUser?.uid;
+
+                  if (uid != null) {
+                    // Update Firestore
+                    await FirebaseFirestore.instance
+                        .collection('users')
+                        .doc(uid)
+                        .update({'name': newName, 'phone': newPhone});
+
+                    // Update SQLite
+                    await _dbHelper.updateUser({'uid': uid, 'name': newName, 'phone': newPhone});
+
+                    setState(() {
+                      name = newName;
+                      phone = newPhone;
+                    });
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Profile updated successfully.')),
+                    );
+                  }
+                } catch (e) {
+                  print('Error updating profile: $e');
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Failed to update profile.')),
+                  );
+                }
+
+                Navigator.pop(context);
+              },
+              child: Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Future<void> _logout() async {
     await _authService.signOut(); // Sign out user and clear SQLite data
 
@@ -116,7 +211,7 @@ class _ProfilePageState extends State<ProfilePage> {
         actions: [
           IconButton(
             icon: Icon(Icons.logout),
-            onPressed: _logout, // Awaited Firebase sign-out
+            onPressed: _logout,
           ),
         ],
       ),
@@ -127,12 +222,39 @@ class _ProfilePageState extends State<ProfilePage> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.person, size: 100.0, color: Color(0xFFdf43a1)),
+                  // Display profile photo from assets
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: CircleAvatar(
+                      radius: 50,
+                      backgroundImage: AssetImage('assets/images/profile_photo.png'),
+                    ),
+                  ),
                   SizedBox(height: 20),
                   Text('Name: $name', style: TextStyle(fontSize: 24)),
                   Text('Email: $email', style: TextStyle(fontSize: 24)),
                   Text('Phone: $phone', style: TextStyle(fontSize: 24)),
                   SizedBox(height: 20),
+                  ElevatedButton(
+                    onPressed: _editProfile,
+                    child: Text('Edit Profile'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.pinkAccent,
+                    ),
+                  ),
+                  SizedBox(height: 10),
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => MyPledgedGiftsPage()),
+                      );
+                    },
+                    child: Text('View My Pledged Gifts'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.purpleAccent,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -163,10 +285,9 @@ class _ProfilePageState extends State<ProfilePage> {
                   children: [
                     if (gifts.isNotEmpty)
                       ...gifts.map((gift) => ListTile(
-                        leading: Icon(Icons.card_giftcard, color: Colors.purple), // Gift icon next to the gift
+                        leading: Icon(Icons.card_giftcard, color: Colors.purple),
                         title: Text(gift['name']),
-                        subtitle: Text(
-                            '${gift['description']} - \$${gift['price']}'),
+                        subtitle: Text('${gift['description']} - \$${gift['price']}'),
                       )),
                     if (gifts.isEmpty)
                       Padding(
@@ -198,8 +319,7 @@ class _ProfilePageState extends State<ProfilePage> {
                           .where('event_id', isEqualTo: event['id'])
                           .snapshots(),
                       builder: (context, snapshot) {
-                        if (snapshot.connectionState ==
-                            ConnectionState.waiting) {
+                        if (snapshot.connectionState == ConnectionState.waiting) {
                           return Center(child: CircularProgressIndicator());
                         }
                         final gifts = snapshot.data?.docs ?? [];
@@ -215,8 +335,7 @@ class _ProfilePageState extends State<ProfilePage> {
                             return ListTile(
                               leading: Icon(Icons.card_giftcard, color: Colors.purple),
                               title: Text(gift['name']),
-                              subtitle: Text(
-                                  '${gift['description']} - \$${gift['price']}'),
+                              subtitle: Text('${gift['description']} - \$${gift['price']}'),
                             );
                           }).toList(),
                         );
