@@ -22,10 +22,15 @@ class _HomePageState extends State<HomePage> {
     GiftListPage(),
   ];
 
+  final TextEditingController _searchController = TextEditingController();
+
+  List<Map<String, dynamic>> _filteredFriends = [];
+
   @override
   void initState() {
     super.initState();
     _loadFriends(); // Load friends for the Friends Page
+    _searchController.addListener(_filterFriends);
   }
 
   Future<void> _loadFriends() async {
@@ -82,13 +87,24 @@ class _HomePageState extends State<HomePage> {
 
       setState(() {
         _friends = friends;
+        _filteredFriends = friends;
+
       });
     } catch (e) {
       print('Error loading friends: $e');
     }
   }
 
-
+  void _filterFriends() {
+    final query = _searchController.text.toLowerCase();
+    setState(() {
+      _filteredFriends = _friends
+          .where((friend) =>
+      friend['name'].toLowerCase().contains(query) ||
+          friend['email'].toLowerCase().contains(query))
+          .toList();
+    });
+  }
 
   void _onItemTapped(int index) {
     setState(() {
@@ -272,41 +288,58 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildFriendsPage() {
-    return _friends.isEmpty
-        ? Center(
-      child: Text(
-        'No friends found.',
-        style: TextStyle(fontSize: 18, color: Colors.grey),
-      ),
-    )
-        : ListView.builder(
-      itemCount: _friends.length,
-      itemBuilder: (context, index) {
-        final friend = _friends[index];
-        return Card(
-          margin: EdgeInsets.all(8.0),
-          child: ListTile(
-            leading: CircleAvatar(
-              backgroundImage: AssetImage('assets/images/default_friend.png'), // Your asset image
-              radius: 25, // Adjust the radius as needed
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: TextField(
+            controller: _searchController,
+            decoration: InputDecoration(
+              hintText: 'Search friends...',
+              prefixIcon: Icon(Icons.search),
+              border: OutlineInputBorder(),
             ),
-            title: Text(friend['name']),
-            subtitle: Text('${friend['eventCount']} upcoming events'),
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => FriendEventsPage(
-                    friendUid: friend['uid'],
-                    friendName: friend['name'],
+          ),
+        ),
+        Expanded(
+          child: _filteredFriends.isEmpty
+              ? Center(
+            child: Text(
+              'No friends found.',
+              style: TextStyle(fontSize: 18, color: Colors.grey),
+            ),
+          )
+              : ListView.builder(
+            itemCount: _filteredFriends.length,
+            itemBuilder: (context, index) {
+              final friend = _filteredFriends[index];
+              return Card(
+                margin: EdgeInsets.all(8.0),
+                child: ListTile(
+                  leading: CircleAvatar(
+                    backgroundImage:
+                    AssetImage('assets/images/default_friend.png'),
+                    radius: 25,
                   ),
+                  title: Text(friend['name']),
+                  subtitle: Text('${friend['eventCount']} upcoming events'),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => FriendEventsPage(
+                          friendUid: friend['uid'],
+                          friendName: friend['name'],
+                        ),
+                      ),
+                    );
+                  },
                 ),
               );
             },
           ),
-        );
-      },
+        ),
+      ],
     );
   }
-
 }
