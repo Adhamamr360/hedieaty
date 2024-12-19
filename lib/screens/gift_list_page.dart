@@ -17,6 +17,8 @@ class _GiftListPageState extends State<GiftListPage> {
   final String uid = FirebaseAuth.instance.currentUser!.uid;
   List<Map<String, dynamic>> _localGifts = [];
   List<Map<String, dynamic>> _firestoreGifts = [];
+  String _sortCriteria = 'Name';
+
 
   @override
   void initState() {
@@ -42,17 +44,20 @@ class _GiftListPageState extends State<GiftListPage> {
           'id': doc.id,
           'name': data['name'] ?? 'Unnamed Gift',
           'description': data['description'] ?? '',
-          'price': data['price'] ?? 0.0,
-          'event': data['event'] ?? 'No Event',
+          'price': (data['price'] ?? 0.0).toInt(),          'event': data['event'] ?? 'No Event',
           'category': data['category'] ?? 'Uncategorized',
           'status': data['status'] ?? 'not_pledged',
         };
       }).toList();
 
-      // Update the state with loaded gifts
       setState(() {
         _localGifts = localGifts;
         _firestoreGifts = firestoreGifts;
+
+        // If a sort is already selected, apply sorting to both
+        if (_sortCriteria.isNotEmpty) {
+          _sortGifts();  // Apply sorting method for gifts
+        }
       });
     } catch (e) {
       print('Error loading gifts: $e');
@@ -61,6 +66,32 @@ class _GiftListPageState extends State<GiftListPage> {
       );
     }
   }
+
+  void _sortGifts() {
+    setState(() {
+      if (_sortCriteria == 'Name') {
+        // Sort by name
+        _localGifts.sort((a, b) => a['name'].compareTo(b['name']));
+        _firestoreGifts.sort((a, b) => a['name'].compareTo(b['name']));
+      } else if (_sortCriteria == 'Category') {
+        // Sort by category (or another criterion)
+        _localGifts.sort((a, b) => a['category'].compareTo(b['category']));
+        _firestoreGifts.sort((a, b) => a['category'].compareTo(b['category']));
+      } else if (_sortCriteria == 'Price') {
+      // Sort by price
+      _localGifts.sort((a, b) => (a['price'] as int).compareTo(b['price'] as int));
+      _firestoreGifts.sort((a, b) => (a['price'] as int).compareTo(b['price'] as int));
+    }
+    });
+  }
+
+
+  String _getStatus(String itemDate) {
+    final DateTime itemDateTime = DateTime.parse(itemDate);
+    final DateTime currentDate = DateTime.now();
+    return itemDateTime.isBefore(currentDate) ? 'Past' : 'Upcoming';
+  }
+
 
   void _onDeletePressed(BuildContext context, Map<String, dynamic> gift, bool isFirestore, Future<void> Function() loadGifts) {
     if (isFirestore && gift['status'] != 'not_pledged') {
@@ -154,6 +185,70 @@ class _GiftListPageState extends State<GiftListPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: Text('Sort'),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.sort),
+            onPressed: () async {
+              String? selectedSort = await showDialog<String>(
+                context: context,
+                builder: (BuildContext context) {
+                  return AlertDialog(
+                    title: Text('Sort By'),
+                    content: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        RadioListTile<String>(
+                          value: 'Name',
+                          groupValue: _sortCriteria,
+                          onChanged: (value) {
+                            setState(() {
+                              _sortCriteria = value!;
+                            });
+                            Navigator.pop(context, value);
+                          },
+                          title: Text('Name'),
+                        ),
+                        RadioListTile<String>(
+                          value: 'Category',
+                          groupValue: _sortCriteria,
+                          onChanged: (value) {
+                            setState(() {
+                              _sortCriteria = value!;
+                            });
+                            Navigator.pop(context, value);
+                          },
+                          title: Text('Category'),
+                        ),
+                        RadioListTile<String>(
+                          value: 'Price',
+                          groupValue: _sortCriteria,
+                          onChanged: (value) {
+                            setState(() {
+                              _sortCriteria = value!;
+                            });
+                            Navigator.pop(context, value);
+                          },
+                          title: Text('price'),
+                        ),
+
+                      ],
+                    ),
+                  );
+                },
+              );
+              if (selectedSort != null) {
+                setState(() {
+                  _sortCriteria = selectedSort;
+                });
+                _sortGifts(); // Apply sorting
+              }
+            },
+          )
+        ],
+      ),
+
       body: Column(
         children: [
           Padding(

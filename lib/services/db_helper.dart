@@ -37,7 +37,7 @@ class DatabaseHelper {
     uid TEXT NOT NULL,
     name TEXT NOT NULL,
     description TEXT,
-    price REAL,
+    price INTEGER,
     event TEXT,
     event_id INTEGER,  
     category TEXT)'''); // Added category column
@@ -59,7 +59,7 @@ class DatabaseHelper {
       uid TEXT NOT NULL,
       name TEXT NOT NULL,
       description TEXT,
-      price REAL,
+      price INTEGER,
       event TEXT)''');
       await db.execute('''CREATE TABLE IF NOT EXISTS events (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -207,9 +207,10 @@ class DatabaseHelper {
 
   Future<List<Map<String, dynamic>>> getGiftsForUser(String uid) async {
     final db = await database;
-    // Fetch all gifts related to the user
-    return await db.query('gifts', where: 'uid = ?', whereArgs: [uid]);
+    final result = await db.query('gifts', where: 'uid = ?', whereArgs: [uid]);
+    return List<Map<String, dynamic>>.from(result); // Create a modifiable copy of the result
   }
+
 
   Future<List<Map<String, dynamic>>> getGiftsForEvent(String uid, String event) async {
     final db = await database;
@@ -294,7 +295,8 @@ class DatabaseHelper {
 
   Future<List<Map<String, dynamic>>> getEventsForUser(String uid) async {
     final db = await database;
-    return await db.query('events', where: 'uid = ?', whereArgs: [uid]);
+    final result = await db.query('events', where: 'uid = ?', whereArgs: [uid]);
+    return List.from(result); // Create a modifiable copy of the result.
   }
 
   Future<void> updateEventGiftCount(String eventName, int giftCountChange) async {

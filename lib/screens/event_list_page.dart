@@ -17,6 +17,7 @@ class _EventListPageState extends State<EventListPage> {
 
   List<Map<String, dynamic>> _localEvents = [];
   List<Map<String, dynamic>> _firestoreEvents = [];
+  String _sortCriteria = 'Name'; // Default sorting criteria
 
   @override
   void initState() {
@@ -42,7 +43,38 @@ class _EventListPageState extends State<EventListPage> {
           'id': doc.id,
         };
       }).toList();
+
+      // If a sort is already selected, apply sorting to both
+      if (_sortCriteria.isNotEmpty) {
+        _sortEvents();
+      }
     });
+  }
+
+
+  void _sortEvents() {
+    setState(() {
+      if (_sortCriteria == 'Name') {
+        // Sort by name
+        _localEvents.sort((a, b) => a['name'].compareTo(b['name']));
+        _firestoreEvents.sort((a, b) => a['name'].compareTo(b['name']));
+      } else if (_sortCriteria == 'Status') {
+        // Sort by date
+        _localEvents.sort((a, b) => a['date'].compareTo(b['date']));
+        _firestoreEvents.sort((a, b) => a['date'].compareTo(b['date']));
+      }
+    });
+  }
+
+  String _getEventStatus(String eventDate) {
+    final DateTime eventDateTime = DateTime.parse(eventDate);
+    final DateTime currentDate = DateTime.now();
+
+    if (eventDateTime.isBefore(currentDate)) {
+      return 'Past';
+    } else {
+      return 'Upcoming';
+    }
   }
 
   Future<void> _publishLocalEvent(Map<String, dynamic> event) async {
@@ -74,7 +106,7 @@ class _EventListPageState extends State<EventListPage> {
           'created_at': Timestamp.now(),
         });
         // Delete the gift from SQLite
-        await _dbHelper.deleteGift(gift['id']);
+        await _dbHelper.deleteGift(gift);
       }
 
       // Delete the local event from SQLite
@@ -91,17 +123,6 @@ class _EventListPageState extends State<EventListPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to publish local event.')),
       );
-    }
-  }
-
-  String _getEventStatus(String eventDate) {
-    final DateTime eventDateTime = DateTime.parse(eventDate);
-    final DateTime currentDate = DateTime.now();
-
-    if (eventDateTime.isBefore(currentDate)) {
-      return 'Past';
-    } else {
-      return 'Upcoming';
     }
   }
 
@@ -159,6 +180,58 @@ class _EventListPageState extends State<EventListPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: Text('Sort'),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.sort),
+            onPressed: () async {
+              String? selectedSort = await showDialog<String>(
+                context: context,
+                builder: (BuildContext context) {
+                  return AlertDialog(
+                    title: Text('Sort By'),
+                    content: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        RadioListTile<String>(
+                          value: 'Name',
+                          groupValue: _sortCriteria,
+                          onChanged: (value) {
+                            setState(() {
+                              _sortCriteria = value!;
+                            });
+                            Navigator.pop(context, value);
+                          },
+                          title: Text('Name'),
+                        ),
+                        RadioListTile<String>(
+                          value: 'Status',
+                          groupValue: _sortCriteria,
+                          onChanged: (value) {
+                            setState(() {
+                              _sortCriteria = value!;
+                            });
+                            Navigator.pop(context, value);
+                          },
+                          title: Text('Status'),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              );
+              if (selectedSort != null) {
+                setState(() {
+                  _sortCriteria = selectedSort;
+                });
+                _sortEvents(); // Apply sorting
+              }
+            },
+          )
+        ],
+      ),
+
       body: Column(
         children: [
           Padding(

@@ -44,9 +44,9 @@ class _UpdateGiftPageState extends State<UpdateGiftPage> {
       return;
     }
 
-    double? price;
+    int? price;
     try {
-      price = double.parse(_priceController.text.trim());
+      price = int.parse(_priceController.text.trim());
       if (price < 0) throw FormatException();
     } catch (_) {
       ScaffoldMessenger.of(context).showSnackBar(
