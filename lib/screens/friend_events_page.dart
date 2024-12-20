@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import 'package:lottie/lottie.dart';
 
 class FriendEventsPage extends StatefulWidget {
   final String friendUid;
@@ -143,27 +144,108 @@ class _FriendEventsPageState extends State<FriendEventsPage> {
                                 Text('Price: \$${gift['price']}'),
                                 Text('Description: ${gift['description']}'),
                               ],
-                            ),                            trailing: Row(
+                            ),
+                            trailing: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 if (status == 'not_pledged')
                                   ElevatedButton(
-                                    onPressed: () => _updateGiftStatus(giftId, 'pledged'),
+                                    onPressed: () async {
+                                      // Show the Lottie animation dialog
+                                      showDialog(
+                                        context: context,
+                                        barrierDismissible: false,
+                                        builder: (context) => Center(
+                                          child: Lottie.asset(
+                                            'assets/animations/Tick.json', // Animation for "Pledge"
+                                            repeat: false,
+                                            onLoaded: (composition) {
+                                              Future.delayed(composition.duration, () {
+                                                Navigator.of(context).pop(); // Close the dialog
+                                              });
+                                            },
+                                          ),
+                                        ),
+                                      );
+
+                                      // Update the gift status
+                                      await _updateGiftStatus(giftId, 'pledged');
+                                    },
                                     child: Text('Pledge'),
                                   ),
                                 if (status == 'pledged' && isPledgedByYou)
                                   ElevatedButton(
-                                    onPressed: () => _updateGiftStatus(giftId, 'purchased'),
+                                    onPressed: () async {
+                                      // Show the Lottie animation dialog
+                                      showDialog(
+                                        context: context,
+                                        barrierDismissible: false,
+                                        builder: (context) => Center(
+                                          child: Lottie.asset(
+                                            'assets/animations/Money.json', // Animation for "Purchase"
+                                            repeat: false,
+                                            onLoaded: (composition) {
+                                              Future.delayed(composition.duration, () {
+                                                Navigator.of(context).pop(); // Close the dialog
+                                              });
+                                            },
+                                          ),
+                                        ),
+                                      );
+
+                                      // Update the gift status
+                                      await _updateGiftStatus(giftId, 'purchased');
+                                    },
                                     child: Text('Purchase'),
                                   ),
                                 if (status == 'pledged' && isPledgedByYou)
                                   ElevatedButton(
-                                    onPressed: () => _updateGiftStatus(giftId, 'not_pledged'),
+                                    onPressed: () async {
+                                      // Show the Lottie animation dialog
+                                      showDialog(
+                                        context: context,
+                                        barrierDismissible: false,
+                                        builder: (context) => Center(
+                                          child: Lottie.asset(
+                                            'assets/animations/Sad.json', // Animation for "Unpledge"
+                                            repeat: false,
+                                            onLoaded: (composition) {
+                                              Future.delayed(composition.duration, () {
+                                                Navigator.of(context).pop(); // Close the dialog
+                                              });
+                                            },
+                                          ),
+                                        ),
+                                      );
+
+                                      // Update the gift status
+                                      await _updateGiftStatus(giftId, 'not_pledged');
+                                    },
                                     child: Text('Unpledge'),
                                   ),
                                 if (status == 'purchased' && isPurchasedByYou)
                                   ElevatedButton(
-                                    onPressed: () => _updateGiftStatus(giftId, 'pledged'),
+                                    onPressed: () async {
+                                      // Show the Lottie animation dialog
+                                      showDialog(
+                                        context: context,
+                                        barrierDismissible: false,
+                                        builder: (context) => Center(
+                                          child: Lottie.asset(
+                                            'assets/animations/Sad.json', // Animation for "Unpurchase"
+                                            repeat: false,
+                                            onLoaded: (composition) {
+                                              Future.delayed(composition.duration, () {
+                                                Navigator.of(context).pop(); // Close the dialog
+                                              });
+                                            },
+                                          ),
+                                        ),
+                                      );
+
+                                      // Update the gift status
+                                      await _updateGiftStatus(giftId, 'pledged');
+                                    },
                                     child: Text('Unpurchase'),
                                   ),
                                 if (status != 'not_pledged' && !isPledgedByYou)
@@ -176,6 +258,7 @@ class _FriendEventsPageState extends State<FriendEventsPage> {
                                   ),
                               ],
                             ),
+
                           ),
                         );
                       }).toList(),

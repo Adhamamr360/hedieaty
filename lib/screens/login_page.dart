@@ -5,6 +5,8 @@ import '../services/db_helper.dart';
 import 'friends_page.dart';
 import 'signup_page.dart';
 import '../services/auth_services.dart';
+import 'dart:math';
+import 'package:flutter/services.dart';
 
 class LoginPage extends StatefulWidget {
   @override
@@ -18,6 +20,12 @@ class _LoginPageState extends State<LoginPage> {
   final DatabaseHelper _dbHelper = DatabaseHelper(); // Initialize DatabaseHelper
 
   bool _isLoading = false;
+
+  String _getRandomImage() {
+    final random = Random();
+    final imageIndex = random.nextInt(5); // There are 6 images (img_0.png to img_5.png)
+    return 'assets/images/img_$imageIndex.png'; // Return the path of the selected image
+  }
 
   Future<void> _login() async {
     final email = _emailController.text.trim();
@@ -47,12 +55,15 @@ class _LoginPageState extends State<LoginPage> {
         if (userDoc.exists) {
           final userData = userDoc.data()!;
 
+          final randomImage = _getRandomImage();
+
           // Save or update the user data in SQLite
           await _dbHelper.insertOrUpdateUser({
             'uid': uid,
             'name': userData['name'] ?? 'N/A',
             'email': userData['email'] ?? 'N/A',
             'phone': userData['phone'] ?? 'N/A',
+            'image': randomImage,
           });
 
           print('User data saved or updated in SQLite.');

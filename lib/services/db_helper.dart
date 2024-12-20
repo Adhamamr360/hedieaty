@@ -31,7 +31,8 @@ class DatabaseHelper {
     uid TEXT NOT NULL,
     name TEXT,
     email TEXT NOT NULL,
-    phone TEXT)''');
+    phone TEXT,
+    image TEXT)''');
     await db.execute('''CREATE TABLE gifts (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     uid TEXT NOT NULL,
@@ -60,7 +61,8 @@ class DatabaseHelper {
       name TEXT NOT NULL,
       description TEXT,
       price INTEGER,
-      event TEXT)''');
+      event TEXT,
+      image TEXT)''');
       await db.execute('''CREATE TABLE IF NOT EXISTS events (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       uid TEXT NOT NULL,
@@ -76,6 +78,10 @@ class DatabaseHelper {
     if (oldVersion < 4) {
       // Add category column to gifts table if not already present
       await db.execute('''ALTER TABLE gifts ADD COLUMN category TEXT''');
+    }
+    if (oldVersion < 5) {
+      // Add the 'image' column to the 'users' table in case it was missed during an upgrade
+      await db.execute('''ALTER TABLE users ADD COLUMN image TEXT''');
     }
   }
 
@@ -154,6 +160,11 @@ class DatabaseHelper {
   Future<void> insertOrUpdateUser(Map<String, dynamic> user) async {
     final db = await database;
 
+    // Ensure the 'image' field is included in the user map if not provided
+    if (!user.containsKey('image')) {
+      user['image'] = null;  // Default to null if no image is provided
+    }
+
     final existingUser = await db.query(
       'users',
       where: 'uid = ?',
@@ -174,6 +185,20 @@ class DatabaseHelper {
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
     }
+  }
+
+  Future<String?> getFriendImagePath(String uid) async {
+    final db = await database;
+    final result = await db.query(
+      'users', // Querying the 'users' table instead of 'friends'
+      where: 'uid = ?',
+      whereArgs: [uid],
+    );
+
+    if (result.isNotEmpty) {
+      return result.first['image'] as String?; // Return the image path for the user
+    }
+    return null; // No image path found for this UID
   }
 
 // ================= Gifts =================

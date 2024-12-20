@@ -7,7 +7,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await DatabaseHelper().database;
-  // await DatabaseHelper().recreateDatabase();
+  await DatabaseHelper().recreateDatabase();
   await Firebase.initializeApp();
 
   runApp(HedieatyApp());

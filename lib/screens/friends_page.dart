@@ -318,7 +318,7 @@ class _HomePageState extends State<HomePage> {
                 child: ListTile(
                   leading: CircleAvatar(
                     backgroundImage:
-                    AssetImage('assets/images/default_friend.png'),
+                    AssetImage('assets/images/img_2.png'),
                     radius: 25,
                   ),
                   title: Text(friend['name']),

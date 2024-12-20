@@ -17,6 +17,7 @@ class _ProfilePageState extends State<ProfilePage> {
   String name = 'Loading...';
   String email = 'Loading...';
   String phone = 'Loading...';
+  String _userImage = '';
 
   List<Map<String, dynamic>> _localEvents = [];
   Map<int, List<Map<String, dynamic>>> _localGifts = {};
@@ -38,6 +39,7 @@ class _ProfilePageState extends State<ProfilePage> {
           name = 'No user logged in';
           email = 'N/A';
           phone = 'N/A';
+          _userImage = '';
         });
         return;
       }
@@ -49,12 +51,14 @@ class _ProfilePageState extends State<ProfilePage> {
           name = user['name'] ?? 'No name provided';
           email = user['email'] ?? 'No email available';
           phone = user['phone'] ?? 'No phone number available';
+          _userImage = user['image'] ?? '';
         });
       } else {
         setState(() {
           name = 'User not found';
           email = 'N/A';
           phone = 'N/A';
+          _userImage = '';
         });
       }
     } catch (e) {
@@ -62,6 +66,7 @@ class _ProfilePageState extends State<ProfilePage> {
         name = 'Error loading profile';
         email = 'N/A';
         phone = 'N/A';
+        _userImage = '';
       });
     }
   }
@@ -227,7 +232,9 @@ class _ProfilePageState extends State<ProfilePage> {
                     padding: const EdgeInsets.all(16.0),
                     child: CircleAvatar(
                       radius: 50,
-                      backgroundImage: AssetImage('assets/images/profile_photo.png'),
+                      backgroundImage: _userImage.startsWith('assets')
+                          ? AssetImage(_userImage) // Use local asset image
+                          : NetworkImage(_userImage) as ImageProvider, // If it's a URL, use NetworkImage
                     ),
                   ),
                   SizedBox(height: 20),
