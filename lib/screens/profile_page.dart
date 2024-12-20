@@ -5,6 +5,7 @@ import '../services/auth_services.dart';
 import '../services/db_helper.dart';
 import 'login_page.dart';
 import 'my_pledged_gifts_page.dart';
+import 'dart:math';
 
 class ProfilePage extends StatefulWidget {
   @override
@@ -207,6 +208,15 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
+  String getRandomImage() {
+    // Generate a random number between 0 and 4
+    final random = Random();
+    int randomIndex = random.nextInt(5); // Generates a number from 0 to 4
+
+    // Construct the asset image path
+    return 'assets/images/img_$randomIndex.png';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -232,9 +242,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     padding: const EdgeInsets.all(16.0),
                     child: CircleAvatar(
                       radius: 50,
-                      backgroundImage: _userImage.startsWith('assets')
-                          ? AssetImage(_userImage) // Use local asset image
-                          : NetworkImage(_userImage) as ImageProvider, // If it's a URL, use NetworkImage
+                      backgroundImage: AssetImage(getRandomImage()),
                     ),
                   ),
                   SizedBox(height: 20),

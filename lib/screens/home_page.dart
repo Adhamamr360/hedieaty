@@ -5,6 +5,8 @@ import 'event_list_page.dart';
 import 'gift_list_page.dart';
 import 'profile_page.dart';
 import 'friend_events_page.dart';
+import 'dart:math';
+
 
 class HomePage extends StatefulWidget {
   @override
@@ -225,6 +227,16 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  String getRandomImage() {
+    // Generate a random number between 0 and 4
+    final random = Random();
+    int randomIndex = random.nextInt(5); // Generates a number from 0 to 4
+
+    // Construct the asset image path
+    return 'assets/images/img_$randomIndex.png';
+  }
+
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -319,7 +331,7 @@ class _HomePageState extends State<HomePage> {
                 child: ListTile(
                   leading: CircleAvatar(
                     backgroundImage:
-                    AssetImage('assets/images/img_2.png'),
+                    AssetImage(getRandomImage()),
                     radius: 25,
                   ),
                   title: Text(friend['name']),
