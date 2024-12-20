@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../services/auth_services.dart'; // Import AuthService
-import 'login_page.dart'; // Import LoginPage
+import '../services/auth_services.dart';
+import 'login_page.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 class SignUpPage extends StatefulWidget {
   @override
@@ -133,12 +134,16 @@ class _SignUpPageState extends State<SignUpPage> {
       final user = userCredential.user;
       final uid = user!.uid;
 
+      // Generate the FCM token
+      String? fcmToken = await FirebaseMessaging.instance.getToken();
+
       // Save user details to Firestore
       await FirebaseFirestore.instance.collection('users').doc(uid).set({
         'uid': uid,
         'email': email,
         'phone': phone,
         'name': name,
+        'fcmToken': fcmToken, // Save the FCM token
       });
 
       // Navigate back to LoginPage after successful sign-up
