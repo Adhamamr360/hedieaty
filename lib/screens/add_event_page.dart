@@ -129,7 +129,7 @@ class _AddEventPageState extends State<AddEventPage> {
               decoration: InputDecoration(labelText: 'Description'),
             ),
             TextField(
-              key: ValueKey('eventLocationField'), // Add the key here
+              key: ValueKey('eventLocationField'),
               controller: _locationController,
               decoration: InputDecoration(labelText: 'Location'),
             ),
@@ -143,7 +143,7 @@ class _AddEventPageState extends State<AddEventPage> {
                 ),
                 Spacer(),
                 TextButton(
-                  key: ValueKey('eventDatePicker'), // Add the key here
+                  key: ValueKey('eventDatePicker'),
                   onPressed: _pickDate,
                   child: Text('Select Date'),
                 ),
@@ -162,7 +162,7 @@ class _AddEventPageState extends State<AddEventPage> {
                   ),
                 ),
                 ElevatedButton(
-                  key: ValueKey('submitEventButton'), // Add the key here
+                  key: ValueKey('submitEventButton'),
                   onPressed: _publishEventToFirestore,
                   child: Text('Publish'),
                   style: ElevatedButton.styleFrom(

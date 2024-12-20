@@ -20,7 +20,7 @@ class _AddGiftPageState extends State<AddGiftPage> {
   List<Map<String, dynamic>> _firestoreEvents = [];
   int? _selectedLocalEventId; // Store event ID for local events
   String? _selectedFirestoreEvent; // Store Firestore event ID
-  String? _selectedCategory; // Store selected category
+  String? _selectedCategory;
 
   final List<String> _categories = [
     'Electronics',
@@ -95,7 +95,7 @@ class _AddGiftPageState extends State<AddGiftPage> {
       'name': _nameController.text.trim(),
       'description': _descriptionController.text.trim(),
       'price': int.parse(_priceController.text.trim()),
-      'event': _firestoreEvents.firstWhere((event) => event['id'] == _selectedFirestoreEvent)['name'], // Store event name
+      'event': _firestoreEvents.firstWhere((event) => event['id'] == _selectedFirestoreEvent)['name'],
       'event_id': _selectedFirestoreEvent, // Keep event ID for reference
       'category': _selectedCategory,
       'pledged_status': 'not-pledged',

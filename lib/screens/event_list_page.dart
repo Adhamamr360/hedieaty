@@ -237,7 +237,7 @@ class _EventListPageState extends State<EventListPage> {
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: ElevatedButton(
-              key: const ValueKey('addEventButtonKey'), // Use the same key here
+              key: const ValueKey('addEventButtonKey'),
               onPressed: () async {
                 await Navigator.push(
                   context,
@@ -305,7 +305,7 @@ class _EventListPageState extends State<EventListPage> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         IconButton(
-                          icon: Icon(Icons.edit),                          onPressed: () => _editEvent(event),
+                          icon: Icon(Icons.edit),onPressed: () => _editEvent(event),
                         ),
                         IconButton(
                           icon: Icon(Icons.delete),

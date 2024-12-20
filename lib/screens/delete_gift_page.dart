@@ -38,19 +38,15 @@ class DeleteGiftPage extends StatelessWidget {
           print('Event document does not exist for ID: ${gift['event_id']}');
         }
       } else {
-        // For local gifts, use the gift's ID to delete from local database
         await _dbHelper.deleteGift(gift);
       }
 
-      // Step 4: Show feedback to the user
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Gift deleted successfully!')),
       );
 
-      // Reload gifts after deletion
       await loadGifts();
 
-      // Navigate back after deletion
       Navigator.pop(context);
     } catch (e) {
       // Handle any errors
@@ -92,7 +88,7 @@ class DeleteGiftPage extends StatelessWidget {
             ),
             SizedBox(height: 20),
             ElevatedButton(
-              onPressed: () => Navigator.pop(context), // Cancel button
+              onPressed: () => Navigator.pop(context),
               child: Text('Cancel'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.grey,

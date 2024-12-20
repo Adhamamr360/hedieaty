@@ -237,7 +237,6 @@ class _ProfilePageState extends State<ProfilePage> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Display profile photo from assets
                   Padding(
                     padding: const EdgeInsets.all(16.0),
                     child: CircleAvatar(

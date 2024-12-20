@@ -230,7 +230,7 @@ class _HomePageState extends State<HomePage> {
   String getRandomImage() {
     // Generate a random number between 0 and 4
     final random = Random();
-    int randomIndex = random.nextInt(5); // Generates a number from 0 to 4
+    int randomIndex = random.nextInt(5);
 
     // Construct the asset image path
     return 'assets/images/img_$randomIndex.png';

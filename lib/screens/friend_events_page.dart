@@ -15,7 +15,7 @@ class FriendEventsPage extends StatefulWidget {
 }
 
 class _FriendEventsPageState extends State<FriendEventsPage> {
-  List<Map<String, dynamic>> _friendEvents = []; // Non-nullable list
+  List<Map<String, dynamic>> _friendEvents = [];
 
   @override
   void initState() {
@@ -161,7 +161,7 @@ class _FriendEventsPageState extends State<FriendEventsPage> {
                                             repeat: false,
                                             onLoaded: (composition) {
                                               Future.delayed(composition.duration, () {
-                                                Navigator.of(context).pop(); // Close the dialog
+                                                Navigator.of(context).pop();
                                               });
                                             },
                                           ),

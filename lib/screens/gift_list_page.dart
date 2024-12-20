@@ -44,7 +44,8 @@ class _GiftListPageState extends State<GiftListPage> {
           'id': doc.id,
           'name': data['name'] ?? 'Unnamed Gift',
           'description': data['description'] ?? '',
-          'price': (data['price'] ?? 0.0).toInt(),          'event': data['event'] ?? 'No Event',
+          'price': (data['price'] ?? 0.0).toInt(),
+          'event': data['event'] ?? 'No Event',
           'category': data['category'] ?? 'Uncategorized',
           'status': data['status'] ?? 'not_pledged',
         };
