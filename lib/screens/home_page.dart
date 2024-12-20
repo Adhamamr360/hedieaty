@@ -229,6 +229,7 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        key: ValueKey('homePageAppBar'), // Add a unique Key here
         title: Text(
           _selectedIndex == 0
               ? 'Friends'

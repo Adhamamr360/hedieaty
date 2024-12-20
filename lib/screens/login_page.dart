@@ -2,11 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/db_helper.dart';
-import 'friends_page.dart';
+import 'home_page.dart';
 import 'signup_page.dart';
 import '../services/auth_services.dart';
-import 'dart:math';
-import 'package:flutter/services.dart';
 
 class LoginPage extends StatefulWidget {
   @override
@@ -20,12 +18,6 @@ class _LoginPageState extends State<LoginPage> {
   final DatabaseHelper _dbHelper = DatabaseHelper(); // Initialize DatabaseHelper
 
   bool _isLoading = false;
-
-  String _getRandomImage() {
-    final random = Random();
-    final imageIndex = random.nextInt(5); // There are 6 images (img_0.png to img_5.png)
-    return 'assets/images/img_$imageIndex.png'; // Return the path of the selected image
-  }
 
   Future<void> _login() async {
     final email = _emailController.text.trim();
@@ -55,15 +47,12 @@ class _LoginPageState extends State<LoginPage> {
         if (userDoc.exists) {
           final userData = userDoc.data()!;
 
-          final randomImage = _getRandomImage();
-
           // Save or update the user data in SQLite
           await _dbHelper.insertOrUpdateUser({
             'uid': uid,
             'name': userData['name'] ?? 'N/A',
             'email': userData['email'] ?? 'N/A',
             'phone': userData['phone'] ?? 'N/A',
-            'image': randomImage,
           });
 
           print('User data saved or updated in SQLite.');
@@ -138,6 +127,7 @@ class _LoginPageState extends State<LoginPage> {
                 ),
                 SizedBox(height: 40),
                 TextField(
+                  key: ValueKey('loginEmailField'),
                   controller: _emailController,
                   decoration: InputDecoration(
                     labelText: 'Email',
@@ -146,6 +136,7 @@ class _LoginPageState extends State<LoginPage> {
                 ),
                 SizedBox(height: 20),
                 TextField(
+                  key: ValueKey('loginPasswordField'),
                   controller: _passwordController,
                   obscureText: true,
                   decoration: InputDecoration(
@@ -157,11 +148,13 @@ class _LoginPageState extends State<LoginPage> {
                 _isLoading
                     ? CircularProgressIndicator()
                     : ElevatedButton(
+                  key: ValueKey('loginButtonKey'),  // Add key here
                   onPressed: _login,
                   child: Text("Login"),
                 ),
                 SizedBox(height: 10),
                 TextButton(
+                  key: ValueKey('signUpLink'),
                   onPressed: () {
                     Navigator.push(
                       context,

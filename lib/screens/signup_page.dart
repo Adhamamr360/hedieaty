@@ -214,6 +214,7 @@ class _SignUpPageState extends State<SignUpPage> {
                 ),
                 SizedBox(height: 40),
                 TextField(
+                  key: ValueKey('signupNameField'),
                   controller: _nameController,
                   decoration: InputDecoration(
                     labelText: 'Name',
@@ -222,6 +223,7 @@ class _SignUpPageState extends State<SignUpPage> {
                 ),
                 SizedBox(height: 20),
                 TextField(
+                  key: ValueKey('signupEmailField'),
                   controller: _emailController,
                   decoration: InputDecoration(
                     labelText: 'Email',
@@ -230,6 +232,7 @@ class _SignUpPageState extends State<SignUpPage> {
                 ),
                 SizedBox(height: 20),
                 TextField(
+                  key: ValueKey('signupPasswordField'),
                   controller: _passwordController,
                   obscureText: true,
                   decoration: InputDecoration(
@@ -239,6 +242,7 @@ class _SignUpPageState extends State<SignUpPage> {
                 ),
                 SizedBox(height: 20),
                 TextField(
+                  key: ValueKey('signupPhoneField'),
                   controller: _phoneController,
                   decoration: InputDecoration(
                     labelText: 'Phone Number',
@@ -249,6 +253,7 @@ class _SignUpPageState extends State<SignUpPage> {
                 _isLoading
                     ? CircularProgressIndicator()
                     : ElevatedButton(
+                  key: ValueKey('signUpButton'),
                   onPressed: _signUp,
                   child: Text("Sign Up"),
                 ),

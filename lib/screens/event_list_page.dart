@@ -237,6 +237,7 @@ class _EventListPageState extends State<EventListPage> {
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: ElevatedButton(
+              key: const ValueKey('addEventButtonKey'), // Use the same key here
               onPressed: () async {
                 await Navigator.push(
                   context,
